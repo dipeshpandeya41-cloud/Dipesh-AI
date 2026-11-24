@@ -117,7 +117,7 @@ class ScreenCaptureService : Service() {
         display = null
         reader = null
         projection = null
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        @Suppress("DEPRECATION") stopForeground(true)
         stopSelf()
     }
 
