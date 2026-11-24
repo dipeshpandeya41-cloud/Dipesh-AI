@@ -1,0 +1,85 @@
+# DIPESH AI — Product Plan
+
+## Product vision
+DIPESH AI is a Hindi-first personal AI assistant for Android. The goal is a polished app for text and voice chat, image and user-approved screen understanding, and explicitly requested phone tools.
+
+The app should be usable from an Android phone without a PC. Cloud AI features require the user's own Gemini API key and internet access. Basic help and phone shortcuts should remain useful offline.
+
+## Current repository baseline
+The current source tree contains:
+- Native Android application written in Kotlin using Android Views.
+- Gemini generateContent request code with a configurable model (default: gemini-2.5-flash).
+- Hindi speech recognition intent and Android Text-to-Speech output.
+- Camera capture and gallery image selection followed by Gemini image analysis.
+- One-time screen capture using Android MediaProjection consent before analysis.
+- Local conversation-history persistence using app preferences.
+- Basic offline replies when no API key is configured.
+- Phone Settings and Dialer shortcuts.
+- Accessibility Service with user-invoked Back, Home, Notifications, and Quick Settings actions.
+- GitHub Actions workflow that builds a debug APK and uploads it as an artifact.
+
+These are observations from source code, not a claim that every feature has passed physical-device testing.
+
+## Product requirements
+
+### 1. Polished home and chat experience
+- Clear app header, connection/status indicator, readable conversation bubbles, and simple message composer.
+- Keep voice, camera, gallery, screen understanding, and settings easy to reach.
+- Show loading, empty, offline, and error states clearly.
+- Provide controls to clear local chat history and open AI settings.
+
+### 2. Hindi-first AI conversation
+- Support Hindi, English, and mixed Hindi-English messages.
+- Keep the Gemini model configurable.
+- Handle API errors and network loss with understandable messages and offline fallback.
+- Never ask users to paste an API key into a chat conversation.
+
+### 3. Voice
+- Hindi speech-to-text input.
+- Text-to-speech playback of assistant responses.
+- Clear microphone permission handling and visible speech-recognition state.
+
+### 4. Image understanding
+- Take a photo or choose an image from the gallery.
+- Resize and compress images before sending them to Gemini.
+- Show what is being sent, analysis progress, and errors.
+
+### 5. User-approved screen understanding
+- Request Android MediaProjection permission for each screen-capture session as required by Android.
+- Capture only after the user explicitly starts the action and approves the system prompt.
+- Send the captured frame for analysis, then stop the capture service.
+- Do not silently record, continuously monitor, or transmit the screen in the background.
+
+### 6. Phone tools and automation
+- Provide shortcuts to Android Settings and the Dialer.
+- Keep Accessibility actions transparent and user-triggered.
+- Ask for relevant Android permissions before actions that need them.
+- Do not send messages, place calls, change settings, or make purchases without a clear user action and appropriate system confirmation.
+
+### 7. Privacy and reliability
+- Keep API credentials on-device; never commit secrets to Git.
+- Avoid placing API keys in request URLs. Prefer supported authentication headers.
+- Explain what information is sent to the AI service before image or screen analysis.
+- Keep local history under the user's control and provide a clear-history action.
+- Handle missing permissions, unsupported devices, network errors, and API quota errors gracefully.
+
+### 8. Build and release
+- Build a debug APK with GitHub Actions.
+- Verify workflow results before describing an APK as ready.
+- Add release signing only through secure secrets; never store signing keys in the repository.
+- Test on a real Android device before marking a feature complete.
+
+## Delivery roadmap
+1. Foundation and audit — document the app, confirm package/build settings, and identify gaps.
+2. Home and chat redesign — make the main screen responsive and easier to use on phones.
+3. AI connection hardening — improve API errors, credential handling, model settings, and offline states.
+4. Voice and image experience — polish speech input/output, camera, gallery, and image analysis.
+5. Screen understanding — verify permission-based one-shot capture across supported Android versions.
+6. Automation — expand only safe, transparent, user-triggered Android actions.
+7. Testing and APK delivery — run GitHub Actions, fix build failures, and verify the APK artifact.
+
+## Build
+The repository includes a GitHub Actions workflow at .github/workflows/android.yml. Open the Actions tab, select **Build Dipesh AI APK**, and run it manually, or push a commit to main. Download the Dipesh-AI-debug-apk artifact only after the workflow succeeds.
+
+## Important status note
+The roadmap describes intended work. A feature should be called complete only after its implementation and build/device testing have been verified.
