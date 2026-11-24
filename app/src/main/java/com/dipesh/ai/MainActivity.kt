@@ -75,6 +75,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             gravity = Gravity.CENTER
             setTextColor(0xFF8BC5FF.toInt())
         }, matchWidth())
+        root.addView(JarvisHudView(this), LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, (190 * resources.displayMetrics.density).toInt()
+        ))
         root.addView(TextView(this).apply {
             text = "हिंदी AI • Voice • Camera • Phone Tools"
             textSize = 14f
