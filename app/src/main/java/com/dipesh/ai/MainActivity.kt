@@ -3,6 +3,11 @@ package com.dipesh.ai
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.media.projection.MediaProjectionManager
+import android.os.Build
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -34,12 +39,28 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var input: EditText
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var receiverRegistered = false
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val bytes = intent?.getByteArrayExtra("image")
+            if (bytes != null) {
+                val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (bitmap != null) analyzeImage(bitmap, "इस स्क्रीनशॉट में क्या दिखाई दे रहा है? निजी जानकारी को दोहराने से बचें और उपयोगकर्ता के प्रश्न का उत्तर दें।")
+                else toast("स्क्रीनशॉट पढ़ा नहीं जा सका।")
+            } else toast(intent?.getStringExtra("error") ?: "स्क्रीन कैप्चर असफल रहा।")
+        }
+    }
     private val prefs by lazy { getSharedPreferences("dipesh_ai", MODE_PRIVATE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         tts = TextToSpeech(this, this)
         buildScreen()
+        chat.text = prefs.getString("history", chat.text.toString())
+        val filter = IntentFilter(ScreenCaptureService.ACTION_RESULT)
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        else @Suppress("DEPRECATION") registerReceiver(screenReceiver, filter)
+        receiverRegistered = true
     }
 
     private fun buildScreen() {
@@ -97,12 +118,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setOnClickListener { launchSafely(Intent(Intent.ACTION_DIAL)) }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         phoneTools.addView(Button(this).apply {
-            text = "🖥 स्क्रीन शेयर"
+            text = "🖥 स्क्रीन समझें"
+            setOnClickListener { requestScreenCapture() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        phoneTools.addView(Button(this).apply {
+            text = "🧹 चैट साफ़"
             setOnClickListener {
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle("स्क्रीन शेयर")
-                    .setMessage("स्क्रीन कैप्चर Android के सिस्टम अनुमति-पुष्टिकरण और अलग MediaProjection सेवा से जोड़ा जाएगा। अभी यह बटन केवल फीचर की स्थिति बताता है; स्क्रीन रिकॉर्ड या शेयर नहीं करता।")
-                    .setPositiveButton("ठीक है", null).show()
+                chat.text = "नमस्ते! मैं Dipesh AI हूँ।"
+                saveHistory()
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(phoneTools, matchWidth())
@@ -173,6 +196,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }.show()
     }
 
+    private fun requestScreenCapture() {
+        try {
+            val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            startActivityForResult(manager.createScreenCaptureIntent(), 45)
+        } catch (_: Exception) { toast("इस Android डिवाइस पर स्क्रीन कैप्चर उपलब्ध नहीं है।") }
+    }
+
     private fun startVoiceInput() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 41)
@@ -202,6 +232,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode != RESULT_OK || data == null) return
         when (requestCode) {
+            45 -> {
+                val serviceIntent = Intent(this, ScreenCaptureService::class.java)
+                    .putExtra("resultCode", resultCode).putExtra("data", data)
+                try {
+                    if (Build.VERSION.SDK_INT >= 26) startForegroundService(serviceIntent)
+                    else startService(serviceIntent)
+                    toast("स्क्रीन कैप्चर हो रहा है…")
+                } catch (_: Exception) { toast("स्क्रीन कैप्चर सेवा शुरू नहीं हुई।") }
+            }
             42 -> {
                 val spoken = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
                 if (!spoken.isNullOrBlank()) { input.setText(spoken); input.setSelection(input.text.length) }
@@ -329,6 +368,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
     override fun onDestroy() {
+        if (receiverRegistered) try { unregisterReceiver(screenReceiver) } catch (_: Exception) {}
         tts?.stop()
         tts?.shutdown()
         super.onDestroy()
