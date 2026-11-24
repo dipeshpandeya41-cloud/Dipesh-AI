@@ -300,7 +300,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun analyzeImage(bitmap: Bitmap, prompt: String) {
         val key = prefs.getString("key", "").orEmpty()
         if (key.isBlank()) { toast("पहले AI सेटिंग में अपनी Gemini API key डालें।"); return }
-        chat.append("\n\nआप: [फोटो भेजी गई]\nDipesh AI: फोटो समझ रहा हूँ…")
+        chat.append("\n\nआप: [फोटो/स्क्रीन भेजी गई]\nDipesh AI: विश्लेषण कर रहा हूँ…"); saveHistory()
         thread {
             val answer = try { requestGemini(prompt, key, bitmap) }
             catch (e: Exception) { "फोटो समझने में समस्या: " + (e.message ?: "network error") }
@@ -311,7 +311,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun sendMessage() {
         val message = input.text.toString().trim()
         if (message.isEmpty()) return
-        chat.append("\n\nआप: " + message + "\nDipesh AI: जवाब तैयार हो रहा है…")
+        chat.append("\n\nआप: " + message + "\nDipesh AI: जवाब तैयार हो रहा है…"); saveHistory()
         input.text.clear()
         val key = prefs.getString("key", "").orEmpty()
         if (key.isBlank()) { showAnswer(offlineReply(message)); return }
@@ -388,7 +388,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         try { startActivity(intent) } catch (_: Exception) { toast("यह सुविधा इस फोन पर उपलब्ध नहीं है।") }
     }
 
-    private fun showAnswer(answer: String) { chat.append("\n" + answer) }
+    private fun saveHistory() {
+        prefs.edit().putString("history", chat.text.toString().takeLast(18000)).apply()
+    }
+    private fun showAnswer(answer: String) { chat.append("\n" + answer); saveHistory() }
     private fun speak(text: String) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "dipesh-ai-answer")
         else toast("Voice तैयार हो रही है।")
