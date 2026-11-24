@@ -128,6 +128,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 saveHistory()
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        phoneTools.addView(Button(this).apply {
+            text = "🤖 Automation"
+            setOnClickListener { showAutomationControls() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(phoneTools, matchWidth())
 
         val scroll = ScrollView(this)
@@ -194,6 +198,36 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     .putString("key", key.text.toString().trim()).apply()
                 Toast.makeText(this@MainActivity, "सेटिंग सेव हो गई।", Toast.LENGTH_SHORT).show()
             }.show()
+    }
+
+    private fun showAutomationControls() {
+        val choices = arrayOf(
+            "Accessibility अनुमति चालू करें",
+            "Back दबाएँ",
+            "Home दबाएँ",
+            "Notifications खोलें",
+            "Quick Settings खोलें"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Phone Automation")
+            .setMessage("यह सेवा केवल तुम्हारे चुने हुए सिस्टम शॉर्टकट चलाती है। यह अपने आप स्क्रीन नहीं पढ़ती, टैप नहीं करती और कोई संदेश नहीं भेजती।")
+            .setItems(choices) { _, which ->
+                if (which == 0) {
+                    launchSafely(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                } else {
+                    val action = when (which) {
+                        1 -> "back"
+                        2 -> "home"
+                        3 -> "notifications"
+                        else -> "quick_settings"
+                    }
+                    if (!DipeshAccessibilityService.runUserAction(action)) {
+                        toast("पहले Accessibility अनुमति चालू करें।")
+                    }
+                }
+            }
+            .setNegativeButton("बंद", null)
+            .show()
     }
 
     private fun requestScreenCapture() {
