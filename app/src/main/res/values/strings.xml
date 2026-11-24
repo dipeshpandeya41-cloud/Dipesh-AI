@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Dipesh AI को केवल उपयोगकर्ता द्वारा चुने गए Back, Home, Notifications और Quick Settings सिस्टम शॉर्टकट चलाने की अनुमति देता है। यह स्क्रीन का टेक्स्ट नहीं पढ़ता और न ही अपने आप टैप करता है।</string>
+</resources>
