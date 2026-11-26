@@ -199,6 +199,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val navActions = listOf(
             "🖼 Images" to { showImagesHub() },
             "📚 Library" to { showLibraryHub() },
+            "✅ Tasks" to { showTasksHub() },
             "🎨 Customize" to { showCustomizeHub() },
             "📂 Projects" to { showProjectsHub() },
             "🖥 Remote" to { showRemoteHub() },
@@ -524,13 +525,110 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             maxLines = 14
             gravity = Gravity.TOP
         }
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(Button(this@MainActivity).apply {
+                text = "🔎 Search saved notes"
+                setOnClickListener {
+                    prefs.edit().putString("library_notes", editor.text.toString().take(50000)).apply()
+                    showLibrarySearch()
+                }
+            }, matchWidth())
+            addView(ScrollView(this@MainActivity).apply { addView(editor) },
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        }
         AlertDialog.Builder(this).setTitle("Library • On-device notes")
-            .setView(ScrollView(this).apply { addView(editor) })
+            .setView(panel)
             .setNeutralButton("Import text file") { _, _ -> openLibraryFile() }
             .setNegativeButton("Close", null)
             .setPositiveButton("Save") { _, _ ->
                 prefs.edit().putString("library_notes", editor.text.toString().take(50000)).apply()
                 toast("Saved locally in Library.")
+            }.show()
+    }
+
+    private fun showLibrarySearch() {
+        val notes = prefs.getString("library_notes", "").orEmpty()
+        val query = EditText(this).apply {
+            hint = "Search words or phrases in saved notes"
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this).setTitle("Search Library")
+            .setView(query)
+            .setNegativeButton("Close", null)
+            .setPositiveButton("Search") { _, _ ->
+                val term = query.text.toString().trim()
+                if (term.isBlank()) {
+                    toast("Enter a search term.")
+                    return@setPositiveButton
+                }
+                val matches = notes.lineSequence()
+                    .filter { it.contains(term, ignoreCase = true) }
+                    .take(100)
+                    .toList()
+                AlertDialog.Builder(this).setTitle("Results for: $term")
+                    .setMessage(if (matches.isEmpty()) "No matching lines found in saved notes." else matches.joinToString("\\n"))
+                    .setPositiveButton("OK", null).show()
+            }.show()
+    }
+
+    private fun showTasksHub() {
+        val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        val labels = (0 until tasks.length()).map { i ->
+            val task = tasks.getJSONObject(i)
+            (if (task.optBoolean("done")) "✓ " else "○ ") + task.optString("title", "Task")
+        }.toTypedArray()
+        val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${tasks.length()}")
+            .setItems(labels) { _, which ->
+                val task = tasks.getJSONObject(which)
+                task.put("done", !task.optBoolean("done"))
+                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                showTasksHub()
+            }
+            .setNeutralButton("Clear completed") { _, _ ->
+                val remaining = JSONArray()
+                for (i in 0 until tasks.length()) {
+                    val task = tasks.getJSONObject(i)
+                    if (!task.optBoolean("done")) remaining.put(task)
+                }
+                prefs.edit().putString("local_tasks", remaining.toString()).apply()
+                showTasksHub()
+            }
+            .setNegativeButton("Close", null)
+            .setPositiveButton("＋ Add task", null)
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                showAddLocalTask()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showAddLocalTask() {
+        val title = EditText(this).apply {
+            hint = "Task title"
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this).setTitle("Add offline task")
+            .setView(title)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                val value = title.text.toString().trim()
+                if (value.isBlank()) {
+                    toast("Task title cannot be empty.")
+                    return@setPositiveButton
+                }
+                val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+                if (tasks.length() >= 100) {
+                    toast("Task limit reached (100).")
+                    return@setPositiveButton
+                }
+                tasks.put(JSONObject().put("title", value.take(180)).put("done", false)
+                    .put("created_at", System.currentTimeMillis()))
+                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                showTasksHub()
             }.show()
     }
 
