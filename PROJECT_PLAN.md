@@ -126,7 +126,7 @@ These are observations from source code, not a claim that every feature has pass
 ### 15. Free knowledge and book search
 - Wikipedia article search using the Wikimedia REST API; no API key required. Respect Wikimedia access and reuse policies.
 - Open Library book/author metadata search; no API key required. Default anonymous limit is 1 request per second; identify the app for regular use, cache results, and avoid bulk access.
-- Free Dictionary API English definitions, phonetics, and examples; public no-key endpoint; provider usage policies and availability apply.
+- Free Dictionary API English definitions, phonetics, and examples; public no-key endpoint; provider usage policies and availability apply. Successful lookups are cached locally (up to 30 words) and can be opened offline.
 - Results link to original source pages. Search metadata does not imply that books are free to download or that encyclopedia content is error-free.
 
 ## Build
