@@ -622,6 +622,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val options = arrayOf(
             "Weather forecast • Open-Meteo • No key",
             "Currency rates • Frankfurter • No key",
+            "Country information • REST Countries • No key",
             "API directory and terms",
             "Gemini AI • User's own free-tier key"
         )
@@ -630,8 +631,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 when (which) {
                     0 -> promptWeatherCity()
                     1 -> promptCurrencyConversion()
-                    2 -> showApiDirectoryInfo()
-                    3 -> showSettings()
+                    2 -> promptCountryInfo()
+                    3 -> showApiDirectoryInfo()
+                    4 -> showSettings()
                 }
             }
             .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
@@ -669,13 +671,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 val current = forecast.getJSONObject("current")
                 val name = place.optString("name", city)
                 val region = place.optString("admin1", "")
-                "Weather for $name" + if (region.isNotBlank()) ", $region" else "" +
-                    "\nTemperature: " + current.optDouble("temperature_2m") + " °C" +
-                    "\nFeels like: " + current.optDouble("apparent_temperature") + " °C" +
-                    "\nHumidity: " + current.optInt("relative_humidity_2m") + "%" +
-                    "\nWind: " + current.optDouble("wind_speed_10m") + " km/h" +
-                    "\nUpdated: " + current.optString("time") +
-                    "\nSource: Open-Meteo (CC BY 4.0)"
+                buildString {
+                    append("Weather for $name")
+                    if (region.isNotBlank()) append(", $region")
+                    append("\\nTemperature: ").append(current.optDouble("temperature_2m")).append(" °C")
+                    append("\\nFeels like: ").append(current.optDouble("apparent_temperature")).append(" °C")
+                    append("\\nHumidity: ").append(current.optInt("relative_humidity_2m")).append("%")
+                    append("\\nWind: ").append(current.optDouble("wind_speed_10m")).append(" km/h")
+                    append("\\nUpdated: ").append(current.optString("time"))
+                    append("\\nSource: Open-Meteo (CC BY 4.0)")
+                }
             } catch (e: Exception) {
                 "Weather request failed: " + (e.message ?: "network error")
             }
@@ -749,6 +754,60 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             return JSONObject(body)
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun promptCountryInfo() {
+        val country = EditText(this).apply { hint = "Country name (e.g. Nepal)"; setSingleLine(true) }
+        AlertDialog.Builder(this).setTitle("Country information • REST Countries")
+            .setMessage("Public read-only country data. No API key required.")
+            .setView(country).setNegativeButton("Cancel", null)
+            .setPositiveButton("Search") { _, _ ->
+                val name = country.text.toString().trim()
+                if (name.isBlank()) toast("Enter a country name.") else loadCountryInfo(name)
+            }.show()
+    }
+
+    private fun loadCountryInfo(country: String) {
+        showAnswer("Looking up $country…")
+        thread {
+            val result = try {
+                val address = URL("https://restcountries.com/v3.1/name/" + Uri.encode(country) +
+                    "?fields=name,capital,population,region,subregion,currencies,languages,cca2")
+                val connection = (address.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 10000
+                    readTimeout = 12000
+                    setRequestProperty("Accept", "application/json")
+                    setRequestProperty("User-Agent", "DIPESH-AI-Android/1.0")
+                }
+                val data = try {
+                    val code = connection.responseCode
+                    val body = (if (code in 200..299) connection.inputStream else connection.errorStream)
+                        ?.bufferedReader()?.use { it.readText() }.orEmpty()
+                    if (code !in 200..299) throw Exception("HTTP $code")
+                    JSONArray(body).optJSONObject(0) ?: throw Exception("No country record found.")
+                } finally { connection.disconnect() }
+                val commonName = data.optJSONObject("name")?.optString("common", country) ?: country
+                val capitals = data.optJSONArray("capital") ?: JSONArray()
+                val currencies = data.optJSONObject("currencies") ?: JSONObject()
+                val currencyNames = currencies.keys().asSequence().map { code ->
+                    code + " " + currencies.optJSONObject(code)?.optString("name", "").orEmpty()
+                }.joinToString(", ").ifBlank { "Not listed" }
+                val languages = data.optJSONObject("languages") ?: JSONObject()
+                val languageNames = languages.keys().asSequence().map { languages.optString(it) }.joinToString(", ")
+                buildString {
+                    append("Country: ").append(commonName)
+                    append("\\nCapital: ").append(if (capitals.length() > 0) capitals.optString(0) else "Not listed")
+                    append("\\nRegion: ").append(data.optString("region")).append(" / ").append(data.optString("subregion"))
+                    append("\\nPopulation: ").append(data.optLong("population"))
+                    append("\\nCurrency: ").append(currencyNames)
+                    append("\\nLanguages: ").append(languageNames)
+                    append("\\nCountry code: ").append(data.optString("cca2"))
+                    append("\\nSource: REST Countries")
+                }
+            } catch (e: Exception) { "Country lookup failed: " + (e.message ?: "network error") }
+            runOnUiThread { showAnswer(result) }
         }
     }
 
