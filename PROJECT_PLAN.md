@@ -222,3 +222,10 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Preserve the selected sort while searching and filtering.
 - Place tasks without due dates after scheduled tasks in due-date order.
 - Sorting is performed locally and requires no API or subscription.
+
+
+## Offline task CSV backup
+- Export all locally stored tasks using Android's document picker.
+- Include title, completion, priority, due timestamp, reminder ID, daily repeat, and creation timestamp.
+- Escape CSV fields and write UTF-8 output.
+- Keep the operation offline and user-initiated.

@@ -612,6 +612,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "HIGH" -> "High priority"
             else -> "All tasks"
         }, "↕ Sort: " + when (sort) { "DUE" -> "Due date"; "PRIORITY" -> "Priority"; else -> "Newest first" })
+        labels.add("⇩ Export all tasks to CSV")
         sortedIndices.forEach { i ->
             val task = tasks.getJSONObject(i)
             val due = task.optLong("due_at", 0L)
@@ -635,6 +636,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         .show()
                     return@setItems
                 }
+                if (which == 3) {
+                    exportLocalTasksCsv()
+                    return@setItems
+                }
                 if (which == 2) {
                     val sortLabels = arrayOf("Newest first", "Due date (soonest)", "Priority (high first)")
                     val sortValues = arrayOf("NEWEST", "DUE", "PRIORITY")
@@ -655,7 +660,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         }.setNegativeButton("Cancel", null).show()
                     return@setItems
                 }
-                val taskIndex = sortedIndices[which - 3]
+                val taskIndex = sortedIndices[which - 4]
                 val task = tasks.getJSONObject(taskIndex)
                 val actions = arrayOf("Mark complete / reopen", "Edit task title", "Change priority", "Delete task")
                 AlertDialog.Builder(this).setTitle(task.optString("title", "Task"))
@@ -696,6 +701,31 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         dialog.show()
     }
 
+    private fun csvCell(value: String): String {
+        val quote = 34.toChar()
+        return quote + value.replace(quote.toString(), quote.toString() + quote.toString()) + quote
+    }
+
+    private fun exportLocalTasksCsv() {
+        val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        if (tasks.length() == 0) { toast("There are no tasks to export yet."); return }
+        val rows = mutableListOf("title,done,priority,due_at,reminder_id,repeat_daily,created_at")
+        for (i in 0 until tasks.length()) {
+            val task = tasks.optJSONObject(i) ?: continue
+            rows.add(listOf(csvCell(task.optString("title", "")), task.optBoolean("done").toString(),
+                csvCell(task.optString("priority", "MEDIUM")), task.optLong("due_at", 0L).toString(),
+                task.optInt("reminder_id", 0).toString(), task.optBoolean("repeat_daily").toString(),
+                task.optLong("created_at", 0L).toString()).joinToString(","))
+        }
+        pendingTaskCsvExport = rows.joinToString("\n", postfix = "\n")
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE); type = "text/csv"
+            putExtra(Intent.EXTRA_TITLE, "dipesh-ai-tasks.csv")
+        }
+        try { startActivityForResult(intent, 52) } catch (_: Exception) {
+            pendingTaskCsvExport = ""; toast("Could not open the file picker.")
+        }
+    }
     private fun showScheduleLocalReminder() {
         val now = Calendar.getInstance()
         DatePickerDialog(this, { _, year, month, day ->
@@ -1932,6 +1962,8 @@ Return a multi-file website project. For EACH file, write a heading exactly like
     }
 
     @Deprecated("Platform activity result API")
+    private var pendingTaskCsvExport: String = ""
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode != RESULT_OK || data == null) return
@@ -2017,6 +2049,17 @@ Return a multi-file website project. For EACH file, write a heading exactly like
                     } catch (_: Exception) {
                         toast("CSV फ़ाइल सेव नहीं हो सकी।")
                     }
+                }
+            }
+            52 -> {
+                val uri = data.data
+                if (uri != null) {
+                    try {
+                        contentResolver.openOutputStream(uri)?.use { it.write(pendingTaskCsvExport.toByteArray(Charsets.UTF_8)) }
+                            ?: throw IllegalStateException("Could not open destination")
+                        toast("Task backup exported as CSV.")
+                    } catch (_: Exception) { toast("Task CSV export failed.") }
+                    finally { pendingTaskCsvExport = "" }
                 }
             }
             50 -> {
