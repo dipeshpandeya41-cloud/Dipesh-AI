@@ -584,12 +584,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val task = tasks.getJSONObject(i)
             val due = task.optLong("due_at", 0L)
             val dueLabel = if (due > 0L) " • " + SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(due)) else ""
-            (if (task.optBoolean("done")) "✓ " else "○ ") + task.optString("title", "Task") + dueLabel + if (task.optBoolean("repeat_daily")) " • Daily" else ""
+            (if (task.optBoolean("done")) "✓ " else "○ ") + "[" + task.optString("priority", "MEDIUM") + "] " + task.optString("title", "Task") + dueLabel + if (task.optBoolean("repeat_daily")) " • Daily" else ""
         }.toTypedArray()
         val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${tasks.length()}")
             .setItems(labels) { _, which ->
                 val task = tasks.getJSONObject(which)
-                val actions = arrayOf("Mark complete / reopen", "Edit task title", "Delete task")
+                val actions = arrayOf("Mark complete / reopen", "Edit task title", "Change priority", "Delete task")
                 AlertDialog.Builder(this).setTitle(task.optString("title", "Task"))
                     .setItems(actions) { _, action ->
                         when (action) {
@@ -601,7 +601,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                 showTasksHub()
                             }
                             1 -> showEditLocalTask(tasks, which)
-                            2 -> {
+                            2 -> showTaskPriorityPicker(tasks, which)
+                            3 -> {
                                 cancelLocalReminder(task)
                                 tasks.remove(which)
                                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
@@ -682,7 +683,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             return
         }
         tasks.put(JSONObject().put("title", title).put("done", false)
-            .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId).put("repeat_daily", repeatDaily).put("repeat_anchor_at", triggerAt))
+            .put("created_at", System.currentTimeMillis()).put("priority", "MEDIUM").put("due_at", triggerAt).put("reminder_id", reminderId).put("repeat_daily", repeatDaily).put("repeat_anchor_at", triggerAt))
         prefs.edit().putString("local_tasks", tasks.toString()).apply()
         toast("Reminder scheduled on this device.")
         showTasksHub()
@@ -707,6 +708,21 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             (getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending)
             pending.cancel()
         }
+    }
+
+    private fun showTaskPriorityPicker(tasks: JSONArray, index: Int) {
+        val task = tasks.optJSONObject(index) ?: return
+        val priorities = arrayOf("LOW", "MEDIUM", "HIGH")
+        val current = task.optString("priority", "MEDIUM")
+        val selected = priorities.indexOf(current).coerceAtLeast(0)
+        AlertDialog.Builder(this).setTitle("Task priority")
+            .setSingleChoiceItems(priorities, selected) { dialog, which ->
+                task.put("priority", priorities[which])
+                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                dialog.dismiss()
+                showTasksHub()
+            }
+            .setNegativeButton("Cancel", null).show()
     }
 
     private fun showEditLocalTask(tasks: JSONArray, index: Int) {
@@ -764,7 +780,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     return@setPositiveButton
                 }
                 tasks.put(JSONObject().put("title", value.take(180)).put("done", false)
-                    .put("created_at", System.currentTimeMillis()))
+                    .put("created_at", System.currentTimeMillis()).put("priority", "MEDIUM"))
                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
                 showTasksHub()
             }.show()
