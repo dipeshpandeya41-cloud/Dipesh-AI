@@ -122,6 +122,12 @@ These are observations from source code, not a claim that every feature has pass
 ### 14. Free public holiday calendar
 - Added Nager.Date v4 public holiday lookup for a user-entered ISO 3166-1 alpha-2 country code and the current year. No API key or paid subscription is required. The public service is rate-limited by fair-use expectations and may change; see provider documentation.
 
+
+### 15. Free knowledge and book search
+- Wikipedia article search using the Wikimedia REST API; no API key required. Respect Wikimedia access and reuse policies.
+- Open Library book/author metadata search; no API key required. Default anonymous limit is 1 request per second; identify the app for regular use, cache results, and avoid bulk access.
+- Results link to original source pages. Search metadata does not imply that books are free to download or that encyclopedia content is error-free.
+
 ## Build
 The repository includes a GitHub Actions workflow at .github/workflows/android.yml. Open the Actions tab, select **Build Dipesh AI APK**, and run it manually, or push a commit to main. Download the Dipesh-AI-debug-apk artifact only after the workflow succeeds.
 
