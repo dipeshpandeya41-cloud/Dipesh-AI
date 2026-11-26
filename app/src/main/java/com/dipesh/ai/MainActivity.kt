@@ -682,7 +682,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             return
         }
         tasks.put(JSONObject().put("title", title).put("done", false)
-            .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId).put("repeat_daily", repeatDaily))
+            .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId).put("repeat_daily", repeatDaily).put("repeat_anchor_at", triggerAt))
         prefs.edit().putString("local_tasks", tasks.toString()).apply()
         toast("Reminder scheduled on this device.")
         showTasksHub()
@@ -725,7 +725,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     toast("Task title cannot be empty.")
                     return@setPositiveButton
                 }
-                task.put("title", value.take(180))
+                val updatedTitle = value.take(180)
+                task.put("title", updatedTitle)
+                val reminderId = task.optInt("reminder_id", 0)
+                val dueAt = task.optLong("due_at", 0L)
+                if (reminderId != 0 && dueAt > System.currentTimeMillis() && !task.optBoolean("done")) {
+                    val reminderIntent = Intent(this, ReminderReceiver::class.java).apply {
+                        putExtra(ReminderReceiver.EXTRA_TITLE, updatedTitle)
+                        putExtra(ReminderReceiver.EXTRA_ID, reminderId)
+                    }
+                    val pending = PendingIntent.getBroadcast(this, reminderId, reminderIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                    (getSystemService(Context.ALARM_SERVICE) as AlarmManager)
+                        .setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAt, pending)
+                }
                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
                 showTasksHub()
             }.show()
