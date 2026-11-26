@@ -145,3 +145,5 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Multi-file website generation and packaging: generate HTML/CSS/JS as separate files, validate relative ZIP paths, and export the project as a ZIP using Android's document picker.
 
 - Free translation tool: MyMemory public endpoint, no key, source/target language codes, bounded text input, and explicit warning not to submit sensitive text. Public quotas/availability are not guaranteed.
+
+- Reusable development templates: add editable prefilled starter briefs for five AI-agent patterns and five website patterns. Templates do not imply autonomous execution, live payments, or deployment.
