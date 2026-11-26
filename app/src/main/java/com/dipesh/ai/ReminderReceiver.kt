@@ -23,8 +23,9 @@ class ReminderReceiver : BroadcastReceiver() {
         }
         val contentIntent = PendingIntent.getActivity(context, id, openApp,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        @Suppress("DEPRECATION")
         val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, channelId)
-            else @Suppress("DEPRECATION") Notification.Builder(context)
+            else Notification.Builder(context)
         val notification = builder
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
