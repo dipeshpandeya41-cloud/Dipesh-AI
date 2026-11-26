@@ -115,3 +115,7 @@ The Tasks screen includes local filters for all tasks, active tasks, completed t
 
 ## Offline task search
 Search task titles directly in the local Tasks screen. Search can be combined with the All, Active, Completed, and High priority filters; clearing the search restores the current filter's full results. Search is on-device and requires no network or API.
+
+
+## Offline task sorting
+The Tasks screen supports local sorting by newest first, due date (soonest first), and priority (high to low). Sorting works together with the existing title search and task filters; tasks without a due date appear after dated tasks. No network access or paid API is required.
