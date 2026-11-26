@@ -229,3 +229,11 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Include title, completion, priority, due timestamp, reminder ID, daily repeat, and creation timestamp.
 - Escape CSV fields and write UTF-8 output.
 - Keep the operation offline and user-initiated.
+
+
+## Offline task CSV restore
+- Import the app's exported CSV through Android's document picker.
+- Validate the CSV header and parse quoted cells.
+- Skip duplicate rows and enforce the 100-task local limit.
+- Assign fresh reminder IDs and restore only active future reminders.
+- Keep imports on-device without paid APIs or network calls.
