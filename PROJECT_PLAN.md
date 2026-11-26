@@ -90,6 +90,16 @@ These are observations from source code, not a claim that every feature has pass
 - Treat generated code as untrusted until reviewed and tested. Never execute generated code automatically or embed API secrets in browser code.
 - Keep the first website export self-contained as index.html; multi-file projects and direct hosting/deployment remain future work.
 
+
+### 10. Reference-image navigation
+- **Images:** provide shortcuts to camera, gallery, and user-approved one-time screenshot analysis.
+- **Library:** store notes locally and import user-selected text files.
+- **Customize:** persist a dark/light appearance preference.
+- **Projects:** reopen up to 20 saved AI agent and website outputs.
+- **Remote:** show capability status and secure-pairing requirements; do not expose the device or accept remote commands in this build.
+- **Scheduled:** hand a labelled, user-selected alarm time to Android Clock; the user reviews/confirms it there.
+- **Plugins:** list existing built-in integrations and route each item to its corresponding feature; no arbitrary third-party plugin code is executed.
+
 ## Build
 The repository includes a GitHub Actions workflow at .github/workflows/android.yml. Open the Actions tab, select **Build Dipesh AI APK**, and run it manually, or push a commit to main. Download the Dipesh-AI-debug-apk artifact only after the workflow succeeds.
 
