@@ -40,6 +40,7 @@ import kotlin.concurrent.thread
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var chat: TextView
     private lateinit var input: EditText
+    private lateinit var connectionStatus: TextView
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var receiverRegistered = false
@@ -74,6 +75,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         buildScreen()
         chat.text = prefs.getString("history", chat.text.toString())
+        updateConnectionStatus(if (secureKeys.read().isNullOrBlank()) "Offline mode • Add a Gemini API key in Settings" else "API key saved • Ready to connect", if (secureKeys.read().isNullOrBlank()) 0xFFFFC46B.toInt() else 0xFF83D6A5.toInt())
         val filter = IntentFilter(ScreenCaptureService.ACTION_RESULT)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         else @Suppress("DEPRECATION") registerReceiver(screenReceiver, filter)
@@ -97,8 +99,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             textSize = 14f
             gravity = Gravity.CENTER
             setTextColor(0xFFD6E2F0.toInt())
-            setPadding(0, 5, 0, 10)
+            setPadding(0, 5, 0, 4)
         }, matchWidth())
+        connectionStatus = TextView(this).apply {
+            text = "Checking AI connection…"
+            textSize = 12f
+            gravity = Gravity.CENTER
+            setPadding(8, 4, 8, 10)
+        }
+        root.addView(connectionStatus, matchWidth())
 
         val settingsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         settingsRow.addView(Button(this).apply {
@@ -555,7 +564,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         thread {
             val answer = try { requestGemini(prompt, key, bitmap) }
             catch (e: Exception) { "फोटो समझने में समस्या: " + (e.message ?: "network error") }
-            runOnUiThread { showAnswer(answer) }
+            runOnUiThread { showAnswer(answer); updateConnectionStatus(if (answer.startsWith("फोटो समझने में समस्या:")) "Connection failed • Check internet/API settings" else "Gemini response received", if (answer.startsWith("फोटो समझने में समस्या:")) 0xFFFF8A80.toInt() else 0xFF83D6A5.toInt()) }
         }
     }
 
@@ -565,13 +574,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         chat.append("\n\nआप: " + message + "\nDipesh AI: जवाब तैयार हो रहा है…"); saveHistory()
         input.text.clear()
         val key = secureKeys.read().orEmpty()
-        if (key.isBlank()) { showAnswer(offlineReply(message)); return }
+        if (key.isBlank()) { showAnswer(offlineReply(message)); updateConnectionStatus("Offline mode • Add a Gemini API key in Settings", 0xFFFFC46B.toInt()); return }
+        updateConnectionStatus("Connecting to Gemini…", 0xFF8BC5FF.toInt())
         thread {
             val answer = try { requestGemini(message, key, null) }
             catch (e: Exception) {
                 "ऑनलाइन AI से कनेक्शन नहीं हो पाया (" + (e.message ?: "network error") + ")।\nऑफलाइन मदद: " + offlineReply(message)
             }
-            runOnUiThread { showAnswer(answer) }
+            runOnUiThread { showAnswer(answer); updateConnectionStatus(if (answer.startsWith("ऑनलाइन AI से कनेक्शन नहीं हो पाया")) "Connection failed • Check internet/API settings" else "Gemini response received", if (answer.startsWith("ऑनलाइन AI से कनेक्शन नहीं हो पाया")) 0xFFFF8A80.toInt() else 0xFF83D6A5.toInt()) }
         }
     }
 
@@ -665,6 +675,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun launchSafely(intent: Intent) {
         try { startActivity(intent) } catch (_: Exception) { toast("यह सुविधा इस फोन पर उपलब्ध नहीं है।") }
+    }
+
+    private fun updateConnectionStatus(message: String, color: Int) {
+        if (::connectionStatus.isInitialized) {
+            connectionStatus.text = message
+            connectionStatus.setTextColor(color)
+        }
     }
 
     private fun saveHistory() {
