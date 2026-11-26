@@ -15,7 +15,7 @@ The current source tree contains:
 - Camera capture and gallery image selection followed by Gemini image analysis.
 - One-time screen capture using Android MediaProjection consent before analysis.
 - Local conversation-history persistence using app preferences.
-- Offline-first mode toggle; local arithmetic with parentheses, percentage-of calculations, common length/mass/volume/temperature conversions, and built-in greetings/app guidance work without a network or API key. This is rule-based assistance, not an on-device large language model.
+- Offline-first mode toggle; local arithmetic with parentheses, percentage-of calculations, common length/mass/volume/temperature conversions, local date/time, age calculations, date differences, and built-in greetings/app guidance work without a network or API key. This is rule-based assistance, not an on-device large language model.
 - Phone Settings and Dialer shortcuts.
 - Searchable installed-app picker lists launchable apps with package-name hints; the user explicitly selects which app to open.
 - Accessibility Service with user-invoked Back, Home, Notifications, and Quick Settings actions.
@@ -153,3 +153,9 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Add percentage-of calculations and common length, mass, volume, and temperature conversions to the offline assistant.
 - Keep conversions deterministic and local; clearly distinguish them from live currency exchange rates.
 - Validate input units and reject conversions between incompatible measurement categories.
+
+
+### 17. Offline date and time utilities
+- Read the device-local date and time without network access.
+- Calculate age from a validated birth date and compare two dates in days.
+- Accept ISO `YYYY-MM-DD` and `DD/MM/YYYY` input formats; reject invalid/future birth dates.
