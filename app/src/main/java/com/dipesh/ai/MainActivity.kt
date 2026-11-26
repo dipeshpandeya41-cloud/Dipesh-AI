@@ -589,11 +589,26 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${tasks.length()}")
             .setItems(labels) { _, which ->
                 val task = tasks.getJSONObject(which)
-                val completed = !task.optBoolean("done")
-                task.put("done", completed)
-                if (completed) cancelLocalReminder(task)
-                prefs.edit().putString("local_tasks", tasks.toString()).apply()
-                showTasksHub()
+                val actions = arrayOf("Mark complete / reopen", "Edit task title", "Delete task")
+                AlertDialog.Builder(this).setTitle(task.optString("title", "Task"))
+                    .setItems(actions) { _, action ->
+                        when (action) {
+                            0 -> {
+                                val completed = !task.optBoolean("done")
+                                task.put("done", completed)
+                                if (completed) cancelLocalReminder(task)
+                                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                                showTasksHub()
+                            }
+                            1 -> showEditLocalTask(tasks, which)
+                            2 -> {
+                                cancelLocalReminder(task)
+                                tasks.remove(which)
+                                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                                showTasksHub()
+                            }
+                        }
+                    }.setNegativeButton("Cancel", null).show()
             }
             .setNeutralButton("＋ Reminder", null)
             .setNegativeButton("Close", null)
@@ -628,9 +643,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 val titleInput = EditText(this).apply { hint = "Reminder title"; setSingleLine(true) }
                 AlertDialog.Builder(this).setTitle("Reminder details").setView(titleInput)
                     .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Schedule") { _, _ ->
+                    .setPositiveButton("Next") { _, _ ->
                         val title = titleInput.text.toString().trim().ifBlank { "DIPESH AI reminder" }.take(180)
-                        scheduleLocalReminder(title, date.timeInMillis)
+                        AlertDialog.Builder(this).setTitle("Repeat reminder")
+                            .setSingleChoiceItems(arrayOf("One time", "Every day"), 0, null)
+                            .setNegativeButton("Cancel", null)
+                            .setPositiveButton("Schedule") { repeatDialog, _ ->
+                                val daily = (repeatDialog as AlertDialog).listView.checkedItemPosition == 1
+                                scheduleLocalReminder(title, date.timeInMillis, daily)
+                            }.show()
                     }.show()
             }, now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE), false).show()
         }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).apply {
@@ -638,7 +659,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }.show()
     }
 
-    private fun scheduleLocalReminder(title: String, triggerAt: Long) {
+    private fun scheduleLocalReminder(title: String, triggerAt: Long, repeatDaily: Boolean = false) {
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             toast("Allow notifications, then add the reminder again.")
@@ -661,7 +682,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             return
         }
         tasks.put(JSONObject().put("title", title).put("done", false)
-            .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId))
+            .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId).put("repeat_daily", repeatDaily))
         prefs.edit().putString("local_tasks", tasks.toString()).apply()
         toast("Reminder scheduled on this device.")
         showTasksHub()
@@ -686,6 +707,28 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             (getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending)
             pending.cancel()
         }
+    }
+
+    private fun showEditLocalTask(tasks: JSONArray, index: Int) {
+        val task = tasks.optJSONObject(index) ?: return
+        val input = EditText(this).apply {
+            setSingleLine(true)
+            setText(task.optString("title", ""))
+            setSelection(text.length)
+        }
+        AlertDialog.Builder(this).setTitle("Edit task")
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                val value = input.text.toString().trim()
+                if (value.isBlank()) {
+                    toast("Task title cannot be empty.")
+                    return@setPositiveButton
+                }
+                task.put("title", value.take(180))
+                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                showTasksHub()
+            }.show()
     }
 
     private fun showAddLocalTask() {

@@ -91,3 +91,7 @@ Gemini online features require your own API key. Keep it private: do not paste i
 
 ## Local reminders
 The Tasks hub can schedule a device-local reminder using Android's inexact alarm API and notification channel. Android 13+ requires notification permission. Reminders are stored in app preferences and are scheduled locally without a server, API key, paid service, or exact-alarm special access. Android may defer inexact alarms, and pending alarms are restored after the device finishes booting, when notification permission is available. Opening the app also retries restoration. Completing a reminder task cancels its pending alarm. Verify notification permission and battery settings on the target device.
+
+
+## Task management and recurring reminders
+Tasks can now be edited or deleted from the Tasks hub. Reminder notifications include a **Snooze 10 min** action that updates the saved due time and schedules the reminder again. Reminders can be scheduled once or repeated daily; daily reminders schedule their next occurrence after delivery. All scheduling remains local and uses inexact Android alarms, so Android battery management may delay delivery. Completing a task cancels its pending reminder. Reboot restoration uses the system boot broadcast and retries on app startup.
