@@ -30,6 +30,14 @@ class TaskCsvParserTest {
     }
 
     @Test
+    fun parsesCarriageReturnOnlyRecords() {
+        assertEquals(
+            listOf(listOf("a", "b"), listOf("1", "2")),
+            TaskCsvParser.parseRecords("a,b\\r1,2\\r")
+        )
+    }
+
+    @Test
     fun preservesEmbeddedNewlineInsideQuotedField() {
         assertEquals(
             listOf(listOf("title", "done"), listOf("first line\nsecond line", "false")),
