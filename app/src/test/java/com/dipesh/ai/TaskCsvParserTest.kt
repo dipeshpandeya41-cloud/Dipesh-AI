@@ -69,8 +69,8 @@ class TaskCsvParserTest {
     @Test
     fun acceptsEmptyQuotedFieldsAndTrailingEmptyColumns() {
         assertEquals(
-            listOf(listOf("title", "note"), listOf("", "")),
-            TaskCsvParser.parseRecords("title,note\n\"\",\"\"")
+            listOf(listOf("title", "note"), listOf("value", ""), listOf("last", "")),
+            TaskCsvParser.parseRecords("title,note\nvalue,\"\"\nlast,")
         )
     }
 }
