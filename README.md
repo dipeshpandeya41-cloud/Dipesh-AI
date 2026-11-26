@@ -13,7 +13,7 @@ DIPESH AI is being developed as a polished Android assistant for Hindi and mixed
 - Hindi speech-recognition input and Text-to-Speech output
 - Camera and gallery image selection
 - Permission-based one-time screen capture for AI understanding
-- Offline-first mode toggle with local arithmetic (including parentheses), percentage calculations, common length/mass/volume/temperature conversions, built-in app guidance, greetings, and explicit disclosure that this is not a downloaded local LLM
+- Offline-first mode toggle with local arithmetic (including parentheses), percentage calculations, common length/mass/volume/temperature conversions, device-local date/time, age calculations from a birth date, date-difference calculations, built-in app guidance, greetings, and explicit disclosure that this is not a downloaded local LLM
 - Android Settings and Dialer shortcuts
 - Searchable installed-app picker with package-name hints; the user explicitly selects which app to open
 - User-triggered Accessibility shortcuts (Back, Home, Notifications, Quick Settings)
@@ -82,3 +82,6 @@ Gemini online features require your own API key. Keep it private: do not paste i
 
 
 - Offline calculator additions: percentage-of calculations and deterministic conversions for common length (km/mi/m/ft/cm/in), mass (kg/lb/g/oz), volume (L/mL), and temperature (°C/°F) units. No network or API key is used; this is not a live currency converter.
+
+
+- Offline date utilities use the Android device's local clock and support age calculations and day differences for `YYYY-MM-DD` or `DD/MM/YYYY` dates. They require no network or API key; age/date outputs depend on the device clock.
