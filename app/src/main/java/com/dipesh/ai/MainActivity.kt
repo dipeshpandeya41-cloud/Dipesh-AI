@@ -630,6 +630,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "Book search • Open Library • No key",
             "English dictionary • Dictionary API • No key",
             "Offline dictionary cache • Saved words",
+            "Free text translation • MyMemory • No key",
             "API directory and terms",
             "Gemini AI • User's own free-tier key"
         )
@@ -644,12 +645,79 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     5 -> promptBookSearch()
                     6 -> promptDictionaryLookup()
                     7 -> showOfflineDictionaryCache()
-                    8 -> showApiDirectoryInfo()
-                    9 -> showSettings()
+                    8 -> promptFreeTranslation()
+                    9 -> showApiDirectoryInfo()
+                    10 -> showSettings()
                 }
             }
             .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
             .setPositiveButton("Close", null).show()
+    }
+
+    private fun promptFreeTranslation() {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 4, 12, 4)
+        }
+        val source = EditText(this).apply {
+            hint = "Source language code (e.g. en)"
+            setSingleLine(true)
+            setText("en")
+        }
+        val target = EditText(this).apply {
+            hint = "Target language code (e.g. ne, hi, es)"
+            setSingleLine(true)
+            setText("ne")
+        }
+        val textInput = EditText(this).apply {
+            hint = "Text to translate (up to 1,500 characters)"
+            minLines = 3
+            maxLines = 5
+            gravity = Gravity.TOP
+        }
+        panel.addView(TextView(this).apply {
+            text = "Examples: en → ne (Nepali), en → hi (Hindi), ne → en. Text is sent to MyMemory's public translation service."
+            textSize = 12f
+        })
+        panel.addView(source)
+        panel.addView(target)
+        panel.addView(textInput)
+        AlertDialog.Builder(this).setTitle("Free text translation")
+            .setMessage("No API key or subscription. Public service limits and availability apply; avoid sending private or sensitive text.")
+            .setView(panel).setNegativeButton("Cancel", null)
+            .setPositiveButton("Translate") { _, _ ->
+                val from = source.text.toString().trim().lowercase(Locale.ROOT)
+                val to = target.text.toString().trim().lowercase(Locale.ROOT)
+                val value = textInput.text.toString().trim()
+                if (!from.matches(Regex("[a-z]{2,3}")) || !to.matches(Regex("[a-z]{2,3}"))) {
+                    toast("Enter valid 2–3 letter language codes.")
+                } else if (value.isBlank()) {
+                    toast("Enter text to translate.")
+                } else if (value.length > 1500) {
+                    toast("Please keep translation text under 1,500 characters.")
+                } else {
+                    translateFreeText(value, from, to)
+                }
+            }.show()
+    }
+
+    private fun translateFreeText(value: String, source: String, target: String) {
+        showAnswer("Translating $source → $target…")
+        thread {
+            val result = try {
+                val data = apiGet("https://api.mymemory.translated.net/get?q=" +
+                    Uri.encode(value) + "&langpair=" + Uri.encode("$source|$target"))
+                val status = data.optInt("responseStatus", 200)
+                if (status != 200) throw Exception(data.optString("responseDetails", "Translation service rejected the request."))
+                val translated = data.optJSONObject("responseData")?.optString("translatedText").orEmpty()
+                if (translated.isBlank()) throw Exception("The translation service returned no text.")
+                "Translation ($source → $target)\\n\\n$translated\\n\\nSource: MyMemory public translation API. Check important translations before use."
+            } catch (e: Exception) {
+                "Translation failed: " + (e.message ?: "network error") +
+                    "\\n\\nThe free public endpoint may be busy or rate-limited. Try again later."
+            }
+            runOnUiThread { showAnswer(result) }
+        }
     }
 
     private fun promptWeatherCity() {
