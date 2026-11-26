@@ -107,3 +107,7 @@ Reminder notifications now provide a **Mark done** action alongside **Snooze 10 
 
 ## Offline task priorities
 Tasks and reminders now carry a local priority label: LOW, MEDIUM, or HIGH. New tasks and reminders default to MEDIUM. Open a task and choose **Change priority** to update it; the task list displays the priority beside its title. Priority data is stored with the existing on-device task records and requires no network or AI API.
+
+
+## Offline task filters
+The Tasks screen includes local filters for all tasks, active tasks, completed tasks, and unfinished HIGH-priority tasks. Filter selection is applied on-device and preserves each task's existing edit, completion, priority, delete, and reminder actions.
