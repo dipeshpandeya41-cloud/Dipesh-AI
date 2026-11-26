@@ -589,11 +589,26 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${tasks.length()}")
             .setItems(labels) { _, which ->
                 val task = tasks.getJSONObject(which)
-                val completed = !task.optBoolean("done")
-                task.put("done", completed)
-                if (completed) cancelLocalReminder(task)
-                prefs.edit().putString("local_tasks", tasks.toString()).apply()
-                showTasksHub()
+                val actions = arrayOf("Mark complete / reopen", "Edit task title", "Delete task")
+                AlertDialog.Builder(this).setTitle(task.optString("title", "Task"))
+                    .setItems(actions) { _, action ->
+                        when (action) {
+                            0 -> {
+                                val completed = !task.optBoolean("done")
+                                task.put("done", completed)
+                                if (completed) cancelLocalReminder(task)
+                                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                                showTasksHub()
+                            }
+                            1 -> showEditLocalTask(tasks, which)
+                            2 -> {
+                                cancelLocalReminder(task)
+                                tasks.remove(which)
+                                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                                showTasksHub()
+                            }
+                        }
+                    }.setNegativeButton("Cancel", null).show()
             }
             .setNeutralButton("＋ Reminder", null)
             .setNegativeButton("Close", null)
@@ -686,6 +701,28 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             (getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending)
             pending.cancel()
         }
+    }
+
+    private fun showEditLocalTask(tasks: JSONArray, index: Int) {
+        val task = tasks.optJSONObject(index) ?: return
+        val input = EditText(this).apply {
+            setSingleLine(true)
+            setText(task.optString("title", ""))
+            setSelection(text.length)
+        }
+        AlertDialog.Builder(this).setTitle("Edit task")
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                val value = input.text.toString().trim()
+                if (value.isBlank()) {
+                    toast("Task title cannot be empty.")
+                    return@setPositiveButton
+                }
+                task.put("title", value.take(180))
+                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                showTasksHub()
+            }.show()
     }
 
     private fun showAddLocalTask() {
