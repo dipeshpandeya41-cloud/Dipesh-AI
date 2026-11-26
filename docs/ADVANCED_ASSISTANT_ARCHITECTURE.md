@@ -58,3 +58,12 @@ This project is designed as a free-first Android assistant. "Free-first" means c
 - Cloud AI still requires an internet connection and a provider API key; provider free quotas, availability, and terms can change.
 - Keep secrets out of source control, chat messages, logs, screenshots, and crash reports.
 - Request only the Android permissions needed for the feature the user starts.
+
+## Development workspaces
+
+The Android home screen now includes two Gemini-powered starter builders:
+
+- **AI Agent Builder:** takes a name, purpose, target runtime, preferred technology, and requirements; generates an architecture, file tree, starter code, tool/function contracts, permission boundaries, setup guidance, and tests in a Markdown result.
+- **Website Builder:** takes a site brief, category, preferred stack, and requirements; requests a responsive, accessible, self-contained HTML document with embedded CSS and JavaScript, saved as `index.html`.
+
+Both builders require the user's configured Gemini API key. Results remain editable in the app and can be copied or saved with Android's document picker. Generated code is not executed or deployed by the app; users should inspect and test it before use. Multi-file project packaging, previews, GitHub publishing, and hosting integrations are future work.
