@@ -2080,6 +2080,7 @@ Return a multi-file website project. For EACH file, write a heading exactly like
             .setPositiveButton(
                 if (fileName.endsWith(".html")) "Export website"
                 else if (fileName == "agent-starter.md") "Export agent project"
+                else if (fileName == "video-project.md") "Export video project"
                 else "Save file"
             ) { _, _ ->
                 val edited = editor.text.toString()
@@ -2095,6 +2096,18 @@ Return a multi-file website project. For EACH file, write a heading exactly like
                                 putExtra(Intent.EXTRA_TITLE, if (zip) "dipesh-ai-website.zip" else "index.html")
                             }
                             try { startActivityForResult(intent, if (zip) 51 else 49) }
+                            catch (_: Exception) { toast("File picker is unavailable.") }
+                        }.setNegativeButton("Cancel", null).show()
+                } else if (fileName == "video-project.md") {
+                    AlertDialog.Builder(this).setTitle("Video project export")
+                        .setItems(arrayOf("Save complete Markdown guide", "Export multi-file video project ZIP")) { _, choice ->
+                            val zip = choice == 1
+                            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = if (zip) "application/zip" else "text/markdown"
+                                putExtra(Intent.EXTRA_TITLE, if (zip) "dipesh-ai-video-project.zip" else "video-project.md")
+                            }
+                            try { startActivityForResult(intent, if (zip) 55 else 49) }
                             catch (_: Exception) { toast("File picker is unavailable.") }
                         }.setNegativeButton("Cancel", null).show()
                 } else if (fileName == "agent-starter.md") {
@@ -2547,6 +2560,33 @@ Return a multi-file website project. For EACH file, write a heading exactly like
                         toast("CSV फ़ाइल सेव हो गई। इसे Excel या Google Sheets में खोलें।")
                     } catch (_: Exception) {
                         toast("CSV फ़ाइल सेव नहीं हो सकी।")
+                    }
+                }
+            }
+            55 -> {
+                val uri = data.data
+                if (uri != null) {
+                    try {
+                        contentResolver.openOutputStream(uri)?.use { raw ->
+                            ZipOutputStream(raw).use { zip ->
+                                fun addFile(path: String, contents: String) {
+                                    zip.putNextEntry(ZipEntry(path))
+                                    zip.write(contents.toByteArray(Charsets.UTF_8))
+                                    zip.closeEntry()
+                                }
+                                val files = AgentProjectFiles.parse(pendingDevelopmentExport)
+                                files.forEach { (path, contents) -> addFile(path, contents) }
+                                if (files.none { it.first.equals("README.md", ignoreCase = true) }) {
+                                    addFile("README.md", "# DIPESH AI Video Project\\n\\nReview the generated files and follow the selected tool's setup instructions.\\n")
+                                }
+                                addFile("VIDEO_EXPORT_NOTES.txt", "Generated project only; no video has been rendered by DIPESH AI. Inspect scripts before running. Use media you own or have permission to edit. Remotion licensing depends on usage.\\n")
+                            }
+                        } ?: throw IllegalStateException("Could not open destination")
+                        toast("Video project ZIP exported successfully.")
+                    } catch (_: Exception) {
+                        toast("Video project ZIP export failed. Please try another save location.")
+                    } finally {
+                        pendingDevelopmentExport = ""
                     }
                 }
             }
