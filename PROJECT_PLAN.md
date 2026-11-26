@@ -169,4 +169,11 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Deliver notifications through a private broadcast receiver and a dedicated notification channel.
 - Request Android 13+ notification permission before scheduling; allow users to retry after granting it.
 - Completing a reminder task cancels its pending alarm.
-- Reminders remain on-device and use no paid API or backend. Inexact delivery may be deferred by Android, and this version does not restore alarms after device reboot.
+- Reminders remain on-device and use no paid API or backend. Inexact delivery may be deferred by Android, pending alarms are restored after `BOOT_COMPLETED` and retried when the app opens or notification permission is granted. Android may still delay inexact alarm delivery, and force-stopping the app can prevent boot restoration until the app is opened again.
+
+
+### 11. Reminder reboot recovery
+- Listen for Android `BOOT_COMPLETED` and recreate future, incomplete reminder alarms from the local task store.
+- Retry restoration on app startup and after notification permission is granted.
+- Skip completed, expired, or malformed reminder entries; do not request exact-alarm special access.
+- Keep all reminder data on-device.
