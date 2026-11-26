@@ -103,3 +103,7 @@ Daily reminders retain their original local clock time across deliveries instead
 
 ## Complete reminders from notifications
 Reminder notifications now provide a **Mark done** action alongside **Snooze 10 min**. Marking a reminder done updates its local task record, cancels its next scheduled occurrence (including daily repeats), and dismisses the notification. This action works locally without an AI API or network connection.
+
+
+## Offline task priorities
+Tasks and reminders now carry a local priority label: LOW, MEDIUM, or HIGH. New tasks and reminders default to MEDIUM. Open a task and choose **Change priority** to update it; the task list displays the priority beside its title. Priority data is stored with the existing on-device task records and requires no network or AI API.
