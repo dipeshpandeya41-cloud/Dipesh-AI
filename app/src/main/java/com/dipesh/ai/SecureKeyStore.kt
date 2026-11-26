@@ -31,18 +31,20 @@ class SecureKeyStore(context: Context) {
             .commit()
     }
 
-    fun read(): String? = try {
-        val ciphertext = prefs.getString(KEY_CIPHERTEXT, null) ?: return null
-        val iv = prefs.getString(KEY_IV, null) ?: return null
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(
-            Cipher.DECRYPT_MODE,
-            getOrCreateKey(),
-            GCMParameterSpec(128, Base64.decode(iv, Base64.NO_WRAP))
-        )
-        String(cipher.doFinal(Base64.decode(ciphertext, Base64.NO_WRAP)), Charsets.UTF_8)
-    } catch (_: Exception) {
-        null
+    fun read(): String? {
+        return try {
+            val ciphertext = prefs.getString(KEY_CIPHERTEXT, null) ?: return null
+            val iv = prefs.getString(KEY_IV, null) ?: return null
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            cipher.init(
+                Cipher.DECRYPT_MODE,
+                getOrCreateKey(),
+                GCMParameterSpec(128, Base64.decode(iv, Base64.NO_WRAP))
+            )
+            String(cipher.doFinal(Base64.decode(ciphertext, Base64.NO_WRAP)), Charsets.UTF_8)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun clear() {
