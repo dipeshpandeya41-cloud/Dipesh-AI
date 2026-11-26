@@ -848,14 +848,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         var skipped = 0
         for (fields in records.drop(1)) {
             if (tasks.length() >= 100) { skipped++; continue }
-            if (fields.size < 7 || fields[0].isBlank()) { skipped++; continue }
-            val title = fields[0].take(180)
-            val createdAt = fields[6].toLongOrNull()?.takeIf { it > 0L } ?: System.currentTimeMillis()
+            val record = TaskCsvImportValidator.parse(fields)
+            if (record == null) { skipped++; continue }
+            val title = record.title
+            val createdAt = record.createdAt
             if (!known.add(title + "|" + createdAt)) { skipped++; continue }
-            val done = fields[1].equals("true", true) || fields[1] == "1"
-            val priority = fields[2].uppercase(Locale.ROOT).takeIf { it == "HIGH" || it == "MEDIUM" || it == "LOW" } ?: "MEDIUM"
-            var dueAt = fields[3].toLongOrNull() ?: 0L
-            val daily = fields[5].equals("true", true) || fields[5] == "1"
+            var dueAt = record.dueAt
+            val daily = record.repeatDaily
             val anchorAt = dueAt
             if (daily && dueAt > 0L && dueAt <= System.currentTimeMillis()) {
                 val next = Calendar.getInstance().apply {
@@ -865,7 +864,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 dueAt = next.timeInMillis
             }
-            val shouldRestoreReminder = !done && dueAt > System.currentTimeMillis()
+            val shouldRestoreReminder = !record.done && dueAt > System.currentTimeMillis()
             var reminderId = 0
             if (shouldRestoreReminder) {
                 reminderId = (System.currentTimeMillis() + tasks.length() * 7919L).toInt() and 0x7fffffff
@@ -874,8 +873,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             val task = JSONObject()
                 .put("title", title)
-                .put("done", done)
-                .put("priority", priority)
+                .put("done", record.done)
+                .put("priority", record.priority)
                 .put("created_at", createdAt)
                 .put("due_at", dueAt)
                 .put("reminder_id", reminderId)
