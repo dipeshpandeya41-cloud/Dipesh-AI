@@ -205,3 +205,8 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Default new task records to MEDIUM for backward-compatible display.
 - Allow priority changes from the task action menu and show the selected priority in the task list.
 - Keep priority data local with no external API requirement.
+
+
+### 16. Offline task filters
+- Add All, Active, Completed, and High priority filters to the local Tasks screen.
+- Keep filtering on-device and preserve existing task actions and reminder behavior.
