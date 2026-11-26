@@ -648,7 +648,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                 cancelLocalReminder(task)
                                 tasks.remove(taskIndex)
                                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
-                                showTasksHub(filter)
+                                showTasksHub(filter, query)
                             }
                         }
                     }.setNegativeButton("Cancel", null).show()
