@@ -210,3 +210,8 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 ### 16. Offline task filters
 - Add All, Active, Completed, and High priority filters to the local Tasks screen.
 - Keep filtering on-device and preserve existing task actions and reminder behavior.
+
+
+### 17. Offline task search
+- Search task titles locally and combine the query with existing task status/priority filters.
+- Provide a clear-search action and preserve task indices for existing task operations.
