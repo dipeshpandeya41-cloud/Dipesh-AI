@@ -594,26 +594,182 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun showPluginsHub() {
         val plugins = arrayOf(
-            "Gemini AI • Chat and image analysis",
+            "Free API Hub • Weather, currency, countries",
+            "Gemini AI • Free-tier key (limited quota)",
             "Camera and Gallery • User-selected images",
             "Voice • Android speech recognition and TTS",
             "Files • Text/CSV import and export",
             "Termux • Launch installed Termux",
             "Android shortcuts • Settings, Dialer, installed apps"
         )
-        AlertDialog.Builder(this).setTitle("Plugins • Built-in tools")
+        AlertDialog.Builder(this).setTitle("Plugins • Integrations")
             .setItems(plugins) { _, which ->
                 when (which) {
-                    0 -> showSettings()
-                    1 -> showImagesHub()
-                    2 -> cycleVoice()
-                    3 -> openTextFile()
-                    4 -> openTermux()
-                    5 -> openInstalledAppChooser()
+                    0 -> showFreeApiHub()
+                    1 -> showSettings()
+                    2 -> showImagesHub()
+                    3 -> cycleVoice()
+                    4 -> openTextFile()
+                    5 -> openTermux()
+                    6 -> openInstalledAppChooser()
                 }
             }
-            .setMessage("Only built-in, user-triggered integrations are listed. Third-party plugin installation and arbitrary plugin execution are not enabled.")
+            .setMessage("Includes selected no-key public APIs and built-in Android tools. Third-party plugin packages are not installed or executed.")
             .setPositiveButton("Close", null).show()
+    }
+
+    private fun showFreeApiHub() {
+        val options = arrayOf(
+            "Weather forecast • Open-Meteo • No key",
+            "Currency rates • Frankfurter • No key",
+            "API directory and terms",
+            "Gemini AI • User's own free-tier key"
+        )
+        AlertDialog.Builder(this).setTitle("Free API Hub • No subscription")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> promptWeatherCity()
+                    1 -> promptCurrencyConversion()
+                    2 -> showApiDirectoryInfo()
+                    3 -> showSettings()
+                }
+            }
+            .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
+            .setPositiveButton("Close", null).show()
+    }
+
+    private fun promptWeatherCity() {
+        val city = EditText(this).apply {
+            hint = "Enter city (e.g. Kathmandu, Dhangaḍhi)"
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this).setTitle("Weather • Open-Meteo")
+            .setMessage("Public weather API • no key or sign-up for eligible non-commercial use.")
+            .setView(city)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Get weather") { _, _ ->
+                val place = city.text.toString().trim()
+                if (place.isBlank()) { toast("Enter a city name first."); return@setPositiveButton }
+                loadWeather(place)
+            }.show()
+    }
+
+    private fun loadWeather(city: String) {
+        showAnswer("Checking weather for $city…")
+        thread {
+            val result = try {
+                val geo = apiGet("https://geocoding-api.open-meteo.com/v1/search?name=" +
+                    Uri.encode(city) + "&count=1&language=en&format=json")
+                val locations = geo.optJSONArray("results") ?: JSONArray()
+                if (locations.length() == 0) throw Exception("City not found. Try a nearby larger city.")
+                val place = locations.getJSONObject(0)
+                val lat = place.getDouble("latitude")
+                val lon = place.getDouble("longitude")
+                val forecast = apiGet("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m&timezone=auto")
+                val current = forecast.getJSONObject("current")
+                val name = place.optString("name", city)
+                val region = place.optString("admin1", "")
+                "Weather for $name" + if (region.isNotBlank()) ", $region" else "" +
+                    "\nTemperature: " + current.optDouble("temperature_2m") + " °C" +
+                    "\nFeels like: " + current.optDouble("apparent_temperature") + " °C" +
+                    "\nHumidity: " + current.optInt("relative_humidity_2m") + "%" +
+                    "\nWind: " + current.optDouble("wind_speed_10m") + " km/h" +
+                    "\nUpdated: " + current.optString("time") +
+                    "\nSource: Open-Meteo (CC BY 4.0)"
+            } catch (e: Exception) {
+                "Weather request failed: " + (e.message ?: "network error")
+            }
+            runOnUiThread { showAnswer(result) }
+        }
+    }
+
+    private fun promptCurrencyConversion() {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 4, 12, 4)
+        }
+        val amount = EditText(this).apply {
+            hint = "Amount (e.g. 100)"
+            setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setText("100")
+        }
+        val base = EditText(this).apply { hint = "From currency (USD)"; setSingleLine(true); setText("USD") }
+        val quote = EditText(this).apply { hint = "To currency (NPR)"; setSingleLine(true); setText("NPR") }
+        panel.addView(amount)
+        panel.addView(base)
+        panel.addView(quote)
+        AlertDialog.Builder(this).setTitle("Currency converter • Frankfurter")
+            .setMessage("Reference exchange rates; not live trading quotes. No API key required.")
+            .setView(panel)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Convert") { _, _ ->
+                val value = amount.text.toString().toDoubleOrNull()
+                val from = base.text.toString().trim().uppercase(Locale.US)
+                val to = quote.text.toString().trim().uppercase(Locale.US)
+                if (value == null || value < 0 || !from.matches(Regex("[A-Z]{3}")) || !to.matches(Regex("[A-Z]{3}"))) {
+                    toast("Enter a valid amount and 3-letter currency codes.")
+                } else loadCurrency(value, from, to)
+            }.show()
+    }
+
+    private fun loadCurrency(amount: Double, base: String, quote: String) {
+        showAnswer("Fetching $base → $quote reference rate…")
+        thread {
+            val result = try {
+                val rate = apiGet("https://api.frankfurter.dev/v2/rate/" +
+                    Uri.encode(base) + "/" + Uri.encode(quote))
+                val factor = rate.getDouble("rate")
+                String.format(Locale.US, "%.2f %s = %.2f %s", amount, base, amount * factor, quote) +
+                    "\nRate: 1 $base = $factor $quote" +
+                    "\nDate: " + rate.optString("date") +
+                    "\nSource: Frankfurter • central-bank reference data"
+            } catch (e: Exception) {
+                "Currency conversion failed: " + (e.message ?: "network error")
+            }
+            runOnUiThread { showAnswer(result) }
+        }
+    }
+
+    private fun apiGet(address: String): JSONObject {
+        val url = URL(address)
+        require(url.protocol == "https") { "Only HTTPS APIs are allowed." }
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 10000
+            readTimeout = 12000
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "DIPESH-AI-Android/1.0")
+        }
+        try {
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) throw Exception("HTTP $code: " + body.take(180))
+            return JSONObject(body)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun showApiDirectoryInfo() {
+        AlertDialog.Builder(this).setTitle("Free API directory")
+            .setMessage(
+                "ACTIVE NO-KEY CONNECTORS\n" +
+                "• Open-Meteo: geocoding and weather forecast; free service is for non-commercial use and has daily limits. Attribution required (CC BY 4.0).\n" +
+                "• Frankfurter: reference exchange rates; no API key; rates are published by central banks and are not live trading quotes.\n\n" +
+                "OTHER BUILT-IN / DEVICE SERVICES\n" +
+                "• Gemini Developer API: limited free tier, requires your own key.\n" +
+                "• Android speech recognition and Text-to-Speech: depends on installed Android speech services.\n\n" +
+                "No unlimited quota is promised. Check each provider's current terms before commercial use."
+            )
+            .setPositiveButton("Open Open-Meteo terms") { _, _ ->
+                launchSafely(Intent(Intent.ACTION_VIEW, Uri.parse("https://open-meteo.com/en/terms")))
+            }
+            .setNeutralButton("Open Frankfurter") { _, _ ->
+                launchSafely(Intent(Intent.ACTION_VIEW, Uri.parse("https://frankfurter.dev/")))
+            }
+            .setNegativeButton("Close", null).show()
     }
 
     private fun showDevelopmentWorkspace(isAgent: Boolean) {
