@@ -38,7 +38,9 @@ import java.util.Locale
 import kotlin.concurrent.thread
 
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
-    private lateinit var chat: TextView
+    private lateinit var chat: LinearLayout
+    private lateinit var chatScroll: ScrollView
+    private var transcript = ""
     private lateinit var input: EditText
     private lateinit var connectionStatus: TextView
     private var tts: TextToSpeech? = null
@@ -74,7 +76,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
         buildScreen()
-        chat.text = prefs.getString("history", chat.text.toString())
+        transcript = prefs.getString("history", "").orEmpty()
+        if (transcript.isBlank()) transcript = "Dipesh AI: नमस्ते! मैं Dipesh AI हूँ।"
+        renderHistory()
         updateConnectionStatus(if (secureKeys.read().isNullOrBlank()) "Offline mode • Add a Gemini API key in Settings" else "API key saved • Ready to connect", if (secureKeys.read().isNullOrBlank()) 0xFFFFC46B.toInt() else 0xFF83D6A5.toInt())
         val filter = IntentFilter(ScreenCaptureService.ACTION_RESULT)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -117,7 +121,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         settingsRow.addView(Button(this).apply {
             text = "🔊 जवाब सुनें"
             setOnClickListener {
-                val latest = chat.text.toString().substringAfterLast("Dipesh AI: ", "")
+                val latest = transcript.substringAfterLast("Dipesh AI: ", "")
                 if (latest.isNotBlank()) speak(latest)
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -154,7 +158,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         phoneTools.addView(Button(this).apply {
             text = "🧹 चैट साफ़"
             setOnClickListener {
-                chat.text = "नमस्ते! मैं Dipesh AI हूँ।"
+                transcript = "Dipesh AI: नमस्ते! मैं Dipesh AI हूँ।"
+                renderHistory()
                 prefs.edit().remove("conversation_history").apply()
                 saveHistory()
             }
@@ -174,15 +179,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setOnClickListener { openInstalledAppChooser() }
         }, matchWidth())
 
-        val scroll = ScrollView(this)
-        chat = TextView(this).apply {
-            textSize = 16f
-            setTextColor(0xFFF2F5FA.toInt())
-            setPadding(12, 12, 12, 12)
-            text = "नमस्ते! मैं Dipesh AI हूँ।\nमाइक से बोलें, संदेश लिखें या कैमरा/गैलरी से फोटो चुनकर उसके बारे में पूछें।\n\nGemini API key जोड़ने पर ऑनलाइन चैट और फोटो पहचान काम करेगी।"
+        chatScroll = ScrollView(this).apply {
+            isFillViewport = true
+            setPadding(4, 8, 4, 8)
         }
-        scroll.addView(chat)
-        root.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        chat = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(6, 4, 6, 12)
+        }
+        chatScroll.addView(chat)
+        root.addView(chatScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         input = EditText(this).apply {
             hint = "अपना संदेश लिखें..."
@@ -560,7 +566,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun analyzeImage(bitmap: Bitmap, prompt: String) {
         val key = secureKeys.read().orEmpty()
         if (key.isBlank()) { toast("पहले AI सेटिंग में अपनी Gemini API key डालें।"); return }
-        chat.append("\n\nआप: [फोटो/स्क्रीन भेजी गई]\nDipesh AI: विश्लेषण कर रहा हूँ…"); saveHistory()
+        addMessageBubble("आप", "[फोटो/स्क्रीन भेजी गई]")
+        addMessageBubble("DIPESH AI", "विश्लेषण कर रहा हूँ…")
         thread {
             val answer = try { requestGemini(prompt, key, bitmap) }
             catch (e: Exception) { "फोटो समझने में समस्या: " + (e.message ?: "network error") }
@@ -571,7 +578,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun sendMessage() {
         val message = input.text.toString().trim()
         if (message.isEmpty()) return
-        chat.append("\n\nआप: " + message + "\nDipesh AI: जवाब तैयार हो रहा है…"); saveHistory()
+        addMessageBubble("आप", message)
+        addMessageBubble("DIPESH AI", "जवाब तैयार हो रहा है…")
         input.text.clear()
         val key = secureKeys.read().orEmpty()
         if (key.isBlank()) { showAnswer(offlineReply(message)); updateConnectionStatus("Offline mode • Add a Gemini API key in Settings", 0xFFFFC46B.toInt()); return }
@@ -684,10 +692,81 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun saveHistory() {
-        prefs.edit().putString("history", chat.text.toString().takeLast(18000)).apply()
+    private fun addMessageBubble(sender: String, message: String) {
+        val cleanMessage = message.trim()
+        if (cleanMessage.isBlank()) return
+        val isUser = sender == "आप"
+        val bubble = createBubble(sender, cleanMessage, isUser)
+        val row = LinearLayout(this).apply {
+            gravity = if (isUser) Gravity.END else Gravity.START
+            setPadding(2, 5, 2, 5)
+            addView(bubble, LinearLayout.LayoutParams(
+                (resources.displayMetrics.widthPixels * 0.78f).toInt().coerceAtLeast(180),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+        }
+        chat.addView(row)
+        transcript = (transcript + "\n" + (if (isUser) "आप: " else "Dipesh AI: ") + cleanMessage).takeLast(18000)
+        saveHistory()
+        chatScroll.post { chatScroll.fullScroll(ScrollView.FOCUS_DOWN) }
     }
-    private fun showAnswer(answer: String) { chat.append("\n" + answer); saveHistory() }
+
+    private fun createBubble(sender: String, message: String, isUser: Boolean): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(14, 10, 14, 10)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(if (isUser) 0xFF244B70.toInt() else 0xFF202D40.toInt())
+                cornerRadius = 22f
+            }
+            addView(TextView(this@MainActivity).apply {
+                text = sender
+                textSize = 11f
+                setTextColor(if (isUser) 0xFFB9DFFF.toInt() else 0xFF8BC5FF.toInt())
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = message
+                textSize = 15f
+                setTextColor(0xFFF2F5FA.toInt())
+                setPadding(0, 4, 0, 0)
+            })
+        }
+    }
+
+    private fun renderHistory() {
+        chat.removeAllViews()
+        var sender = "DIPESH AI"
+        val message = StringBuilder()
+        fun flush() {
+            if (message.isNotEmpty()) {
+                val isUser = sender == "आप"
+                chat.addView(LinearLayout(this).apply {
+                    gravity = if (isUser) Gravity.END else Gravity.START
+                    setPadding(2, 5, 2, 5)
+                    addView(createBubble(sender, message.toString().trim(), isUser),
+                        LinearLayout.LayoutParams((resources.displayMetrics.widthPixels * 0.78f).toInt().coerceAtLeast(180),
+                            ViewGroup.LayoutParams.WRAP_CONTENT))
+                })
+                message.clear()
+            }
+        }
+        transcript.split("\n").forEach { line ->
+            when {
+                line.startsWith("आप: ") -> { flush(); sender = "आप"; message.append(line.removePrefix("आप: ")) }
+                line.startsWith("Dipesh AI: ") -> { flush(); sender = "DIPESH AI"; message.append(line.removePrefix("Dipesh AI: ")) }
+                line.isNotBlank() -> { if (message.isNotEmpty()) message.append('\n'); message.append(line) }
+            }
+        }
+        flush()
+        chatScroll.post { chatScroll.fullScroll(ScrollView.FOCUS_DOWN) }
+    }
+
+    private fun saveHistory() {
+        prefs.edit().putString("history", transcript.takeLast(18000)).apply()
+    }
+    private fun showAnswer(answer: String) { addMessageBubble("DIPESH AI", answer) }
+
     private fun speak(text: String) {
         if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "dipesh-ai-answer")
         else toast("Voice तैयार हो रही है।")
