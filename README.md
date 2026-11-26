@@ -146,3 +146,8 @@ This dashboard reports permission state; it does not grant permissions automatic
 ## Latest verified build
 
 The latest verified main build is GitHub Actions run #160 (https://github.com/dipeshpandeya41-cloud/Dipesh-AI/actions/runs/45751599499). Unit tests and debug APK build completed successfully, and the Dipesh-AI-debug-apk artifact was uploaded. Download it from the run's Artifacts section. This is a debug build, not a Play Store release-signed APK.
+
+
+### AI Agent project ZIP export
+
+The AI Agent Builder can export a generated multi-file starter as a ZIP archive, preserving safe relative paths such as src/main.py and requirements.txt. It also offers the complete Markdown guide as a separate export option. The ZIP parser rejects absolute paths, traversal segments, invalid path characters, duplicate paths, oversized files, and exports more than 40 files. Generation still uses the optional Gemini API key configured by the user; there is no paid API dependency, and the app does not execute generated code.
