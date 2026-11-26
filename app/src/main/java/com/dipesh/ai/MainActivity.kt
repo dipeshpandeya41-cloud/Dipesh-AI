@@ -613,6 +613,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             else -> "All tasks"
         }, "↕ Sort: " + when (sort) { "DUE" -> "Due date"; "PRIORITY" -> "Priority"; else -> "Newest first" })
         labels.add("⇩ Export all tasks to CSV")
+        labels.add("⇧ Import task CSV backup")
         sortedIndices.forEach { i ->
             val task = tasks.getJSONObject(i)
             val due = task.optLong("due_at", 0L)
@@ -638,6 +639,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 if (which == 3) {
                     exportLocalTasksCsv()
+                    return@setItems
+                }
+                if (which == 4) {
+                    importLocalTasksCsv()
                     return@setItems
                 }
                 if (which == 2) {
@@ -726,6 +731,100 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             pendingTaskCsvExport = ""; toast("Could not open the file picker.")
         }
     }
+    private fun importLocalTasksCsv() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/*"
+        }
+        try { startActivityForResult(intent, 53) }
+        catch (_: Exception) { toast("Could not open the file picker.") }
+    }
+
+    private fun parseTaskCsvRow(line: String): List<String> {
+        val fields = mutableListOf<String>()
+        val cell = StringBuilder()
+        var quoted = false
+        var index = 0
+        while (index < line.length) {
+            val ch = line[index]
+            if (ch == '"') {
+                if (quoted && index + 1 < line.length && line[index + 1] == '"') {
+                    cell.append('"')
+                    index++
+                } else quoted = !quoted
+            } else if (ch == ',' && !quoted) {
+                fields.add(cell.toString())
+                cell.setLength(0)
+            } else cell.append(ch)
+            index++
+        }
+        fields.add(cell.toString())
+        return fields
+    }
+
+    private fun importTaskCsv(contents: String) {
+        val lines = contents.removePrefix("\uFEFF").lineSequence().filter { it.isNotBlank() }.toList()
+        val expectedHeader = "title,done,priority,due_at,reminder_id,repeat_daily,created_at"
+        if (lines.size < 2 || !lines.first().trim().equals(expectedHeader, ignoreCase = true)) {
+            toast("This is not a supported DIPESH AI task backup CSV.")
+            return
+        }
+        val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        val known = mutableSetOf<String>()
+        val usedIds = mutableSetOf<Int>()
+        for (i in 0 until tasks.length()) {
+            val task = tasks.optJSONObject(i) ?: continue
+            known.add(task.optString("title") + "|" + task.optLong("created_at"))
+            val id = task.optInt("reminder_id", 0)
+            if (id != 0) usedIds.add(id)
+        }
+        var added = 0
+        var skipped = 0
+        for (line in lines.drop(1)) {
+            if (tasks.length() >= 100) { skipped++; continue }
+            val fields = parseTaskCsvRow(line)
+            if (fields.size < 7 || fields[0].isBlank()) { skipped++; continue }
+            val title = fields[0].take(180)
+            val createdAt = fields[6].toLongOrNull()?.takeIf { it > 0L } ?: System.currentTimeMillis()
+            if (!known.add(title + "|" + createdAt)) { skipped++; continue }
+            val done = fields[1].equals("true", true) || fields[1] == "1"
+            val priority = fields[2].uppercase(Locale.ROOT).takeIf { it == "HIGH" || it == "MEDIUM" || it == "LOW" } ?: "MEDIUM"
+            var dueAt = fields[3].toLongOrNull() ?: 0L
+            val daily = fields[5].equals("true", true) || fields[5] == "1"
+            val anchorAt = dueAt
+            if (daily && dueAt > 0L && dueAt <= System.currentTimeMillis()) {
+                val next = Calendar.getInstance().apply {
+                    timeInMillis = dueAt
+                    add(Calendar.DAY_OF_YEAR, 1)
+                    while (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
+                }
+                dueAt = next.timeInMillis
+            }
+            val shouldRestoreReminder = !done && dueAt > System.currentTimeMillis()
+            var reminderId = 0
+            if (shouldRestoreReminder) {
+                reminderId = (System.currentTimeMillis() + tasks.length() * 7919L).toInt() and 0x7fffffff
+                while (reminderId == 0 || usedIds.contains(reminderId)) reminderId = (reminderId + 1) and 0x7fffffff
+                usedIds.add(reminderId)
+            }
+            val task = JSONObject()
+                .put("title", title)
+                .put("done", done)
+                .put("priority", priority)
+                .put("created_at", createdAt)
+                .put("due_at", dueAt)
+                .put("reminder_id", reminderId)
+                .put("repeat_daily", daily)
+            if (daily && anchorAt > 0L) task.put("repeat_anchor_at", anchorAt)
+            tasks.put(task)
+            added++
+        }
+        prefs.edit().putString("local_tasks", tasks.toString()).apply()
+        if (added > 0) ReminderReceiver.restorePendingReminders(this)
+        toast("Imported $added tasks. Skipped $skipped duplicate, invalid, or over-limit rows.")
+        showTasksHub()
+    }
+
     private fun showScheduleLocalReminder() {
         val now = Calendar.getInstance()
         DatePickerDialog(this, { _, year, month, day ->
@@ -2049,6 +2148,16 @@ Return a multi-file website project. For EACH file, write a heading exactly like
                     } catch (_: Exception) {
                         toast("CSV फ़ाइल सेव नहीं हो सकी।")
                     }
+                }
+            }
+            53 -> {
+                val uri = data.data
+                if (uri != null) {
+                    try {
+                        val contents = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        if (contents.isBlank()) toast("The selected CSV file is empty.")
+                        else importTaskCsv(contents)
+                    } catch (_: Exception) { toast("Could not read this task backup CSV.") }
                 }
             }
             52 -> {
