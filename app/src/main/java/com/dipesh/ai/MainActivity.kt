@@ -627,6 +627,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "Wikipedia search • Wikimedia • No key",
             "Book search • Open Library • No key",
             "English dictionary • Dictionary API • No key",
+            "Offline dictionary cache • Saved words",
             "API directory and terms",
             "Gemini AI • User's own free-tier key"
         )
@@ -640,8 +641,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     4 -> promptWikipediaSearch()
                     5 -> promptBookSearch()
                     6 -> promptDictionaryLookup()
-                    7 -> showApiDirectoryInfo()
-                    8 -> showSettings()
+                    7 -> showOfflineDictionaryCache()
+                    8 -> showApiDirectoryInfo()
+                    9 -> showSettings()
                 }
             }
             .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
@@ -967,6 +969,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun loadDictionaryEntry(word: String) {
         showAnswer("Looking up “$word”…")
         thread {
+            val cacheKey = "dictionary_cache_" + word.trim().lowercase(Locale.US)
+            val cached = prefs.getString(cacheKey, null)
             val result = try {
                 val entries = apiGetArray("https://api.dictionaryapi.dev/api/v2/entries/en/" + Uri.encode(word))
                 if (entries.length() == 0) throw Exception("No dictionary entry found.")
@@ -990,12 +994,39 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         }
                     }
                     append("\\n\\nSource: Free Dictionary API. English definitions only.")
+                    append("\\nSaved on this device for offline access.")
                 }
             } catch (e: Exception) {
-                "Dictionary lookup failed: " + (e.message ?: "network error")
+                if (!cached.isNullOrBlank()) cached + "\\n\\nOffline copy • network lookup failed."
+                else "Dictionary lookup failed: " + (e.message ?: "network error")
+            }
+            if (!result.startsWith("Dictionary lookup failed:")) {
+                prefs.edit().putString(cacheKey, result).apply()
+                val keys = prefs.all.keys.filter { it.startsWith("dictionary_cache_") }
+                if (keys.size > 30) {
+                    keys.sorted().take(keys.size - 30).forEach { prefs.edit().remove(it).apply() }
+                }
             }
             runOnUiThread { showAnswer(result) }
         }
+    }
+
+    private fun showOfflineDictionaryCache() {
+        val entries = prefs.all.keys.filter { it.startsWith("dictionary_cache_") }.sorted()
+        if (entries.isEmpty()) {
+            AlertDialog.Builder(this).setTitle("Offline dictionary")
+                .setMessage("No words saved yet. Look up words while online; successful results are saved automatically for offline use.")
+                .setPositiveButton("Close", null).show()
+            return
+        }
+        val words = entries.map { it.removePrefix("dictionary_cache_") }.toTypedArray()
+        AlertDialog.Builder(this).setTitle("Offline dictionary • ${words.size} saved words")
+            .setItems(words) { _, which ->
+                val cached = prefs.getString(entries[which], null)
+                if (!cached.isNullOrBlank()) showAnswer(cached + "\\n\\nOpened from offline dictionary cache.")
+                else toast("Saved definition is unavailable.")
+            }
+            .setPositiveButton("Close", null).show()
     }
 
     private fun showApiDirectoryInfo() {
