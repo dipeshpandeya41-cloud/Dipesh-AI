@@ -535,7 +535,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
             }, matchWidth())
             addView(ScrollView(this@MainActivity).apply { addView(editor) },
-                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+                matchWidth())
         }
         AlertDialog.Builder(this).setTitle("Library • On-device notes")
             .setView(panel)
