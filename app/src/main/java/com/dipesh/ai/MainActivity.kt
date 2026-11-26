@@ -665,7 +665,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         }.setNegativeButton("Cancel", null).show()
                     return@setItems
                 }
-                val taskIndex = sortedIndices[which - 4]
+                val taskPosition = which - 5
+                if (taskPosition !in sortedIndices.indices) return@setItems
+                val taskIndex = sortedIndices[taskPosition]
                 val task = tasks.getJSONObject(taskIndex)
                 val actions = arrayOf("Mark complete / reopen", "Edit task title", "Change priority", "Delete task")
                 AlertDialog.Builder(this).setTitle(task.optString("title", "Task"))
