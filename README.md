@@ -119,3 +119,7 @@ Search task titles directly in the local Tasks screen. Search can be combined wi
 
 ## Offline task sorting
 The Tasks screen supports local sorting by newest first, due date (soonest first), and priority (high to low). Sorting works together with the existing title search and task filters; tasks without a due date appear after dated tasks. No network access or paid API is required.
+
+
+## Offline task backup
+From the Tasks screen, choose **Export all tasks to CSV** and save through Android's document picker. The export includes task title, completion status, priority, due time, reminder ID, daily-repeat setting, and creation time. CSV values are escaped for spreadsheet compatibility. The export is generated locally; no account, network, or paid API is required.
