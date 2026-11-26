@@ -192,3 +192,9 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Preserve the daily schedule anchor when a reminder is snoozed.
 - Refresh pending notification content when an active reminder title is edited.
 - Display a Daily marker in the task list.
+
+
+### 14. Notification task completion
+- Add a Mark done notification action alongside the ten-minute snooze action.
+- Persist completion state locally and cancel any future alarm, including daily recurrence.
+- Dismiss the notification after completion without requiring app navigation.
