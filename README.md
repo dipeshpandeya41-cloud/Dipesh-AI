@@ -99,3 +99,7 @@ Tasks can now be edited or deleted from the Tasks hub. Reminder notifications in
 
 ## Reminder timing improvements
 Daily reminders retain their original local clock time across deliveries instead of drifting forward by 24 hours from the notification delivery time. Snoozing changes only the next due time and preserves the daily schedule anchor. Editing a reminder title refreshes its pending alarm so the notification uses the updated title. Existing daily reminders without an anchor are upgraded when their next occurrence is scheduled.
+
+
+## Complete reminders from notifications
+Reminder notifications now provide a **Mark done** action alongside **Snooze 10 min**. Marking a reminder done updates its local task record, cancels its next scheduled occurrence (including daily repeats), and dismisses the notification. This action works locally without an AI API or network connection.
