@@ -78,6 +78,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private val reminderPermissionRequest = 73
     private val prefs by lazy { getSharedPreferences("dipesh_ai", MODE_PRIVATE) }
     private val secureKeys by lazy { SecureKeyStore(this) }
+    private val taskStorage by lazy { TaskStorage(prefs) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -579,7 +580,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun showTasksHub(filter: String = "ALL", query: String = "", sort: String = "NEWEST") {
-        val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        val tasks = taskStorage.load()
         val visibleIndices = (0 until tasks.length()).filter { i ->
             val task = tasks.getJSONObject(i)
             val matchesFilter = when (filter) {
@@ -667,7 +668,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                 if (!item.optBoolean("done")) remaining.put(item)
                                 else cancelLocalReminder(item)
                             }
-                            prefs.edit().putString("local_tasks", remaining.toString()).apply()
+                            taskStorage.save(remaining)
                             toast("Removed $completedCount completed task(s).")
                             showTasksHub(filter, query, sort)
                         }.show()
@@ -691,7 +692,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                 item.put("done", true)
                                 cancelLocalReminder(item)
                             }
-                            prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                            taskStorage.save(tasks)
                             toast("Completed ${activeVisible.size} task(s).")
                             showTasksHub(filter, query, sort)
                         }.show()
@@ -719,7 +720,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                     remaining.put(item)
                                 }
                             }
-                            prefs.edit().putString("local_tasks", remaining.toString()).apply()
+                            taskStorage.save(remaining)
                             toast("Deleted $removed visible task(s).")
                             showTasksHub(filter, query, sort)
                         }.show()
@@ -757,7 +758,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                 val completed = !task.optBoolean("done")
                                 task.put("done", completed)
                                 if (completed) cancelLocalReminder(task)
-                                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                                taskStorage.save(tasks)
                                 showTasksHub(filter, query)
                             }
                             1 -> showEditLocalTask(tasks, taskIndex)
@@ -765,7 +766,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             3 -> {
                                 cancelLocalReminder(task)
                                 tasks.remove(taskIndex)
-                                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                                taskStorage.save(tasks)
                                 showTasksHub(filter, query)
                             }
                         }
@@ -794,7 +795,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun exportLocalTasksCsv() {
-        val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        val tasks = taskStorage.load()
         if (tasks.length() == 0) { toast("There are no tasks to export yet."); return }
         val rows = mutableListOf("title,done,priority,due_at,reminder_id,repeat_daily,created_at")
         for (i in 0 until tasks.length()) {
@@ -835,7 +836,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             toast("This is not a supported DIPESH AI task backup CSV.")
             return
         }
-        val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        val tasks = taskStorage.load()
         val known = mutableSetOf<String>()
         val usedIds = mutableSetOf<Int>()
         for (i in 0 until tasks.length()) {
@@ -885,7 +886,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             tasks.put(task)
             added++
         }
-        prefs.edit().putString("local_tasks", tasks.toString()).apply()
+        taskStorage.save(tasks)
         if (added > 0) ReminderReceiver.restorePendingReminders(this)
         val skipped = invalid + duplicates + overLimit
         val summary = "Import complete\\nAdded: $added\\nInvalid rows: $invalid\\nDuplicates: $duplicates\\nOver 100-task limit: $overLimit\\nSkipped total: $skipped"
@@ -945,7 +946,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-        val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        val tasks = taskStorage.load()
         if (tasks.length() >= 100) {
             alarm.cancel(pending)
             toast("Task limit reached (100).")
@@ -953,7 +954,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         tasks.put(JSONObject().put("title", title).put("done", false)
             .put("created_at", System.currentTimeMillis()).put("priority", "MEDIUM").put("due_at", triggerAt).put("reminder_id", reminderId).put("repeat_daily", repeatDaily).put("repeat_anchor_at", triggerAt))
-        prefs.edit().putString("local_tasks", tasks.toString()).apply()
+        taskStorage.save(tasks)
         toast("Reminder scheduled on this device.")
         showTasksHub()
     }
@@ -987,7 +988,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         AlertDialog.Builder(this).setTitle("Task priority")
             .setSingleChoiceItems(priorities, selected) { dialog, which ->
                 task.put("priority", priorities[which])
-                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                taskStorage.save(tasks)
                 dialog.dismiss()
                 showTasksHub()
             }
@@ -1024,7 +1025,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     (getSystemService(Context.ALARM_SERVICE) as AlarmManager)
                         .setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAt, pending)
                 }
-                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                taskStorage.save(tasks)
                 showTasksHub()
             }.show()
     }
@@ -1043,14 +1044,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     toast("Task title cannot be empty.")
                     return@setPositiveButton
                 }
-                val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+                val tasks = taskStorage.load()
                 if (tasks.length() >= 100) {
                     toast("Task limit reached (100).")
                     return@setPositiveButton
                 }
                 tasks.put(JSONObject().put("title", value.take(180)).put("done", false)
                     .put("created_at", System.currentTimeMillis()).put("priority", "MEDIUM"))
-                prefs.edit().putString("local_tasks", tasks.toString()).apply()
+                taskStorage.save(tasks)
                 showTasksHub()
             }.show()
     }
