@@ -106,6 +106,11 @@ These are observations from source code, not a claim that every feature has pass
 - Lock the main activity to portrait orientation for a 9:16-style mobile experience. The interface adapts to the device's actual available height; it is not a fixed-resolution 9:16 canvas.
 - Show only real app state. Predictive analytics is labelled as not connected until a real data source is implemented.
 
+
+### 12. Command Center motion and voice feedback
+- Animate the central AI core with a subtle scale pulse and cancel animators when the activity is destroyed.
+- Add voice-log feedback when speech recognition is requested and when recognized text is returned. The waveform glyph is decorative; no live microphone amplitude is claimed or recorded.
+
 ## Build
 The repository includes a GitHub Actions workflow at .github/workflows/android.yml. Open the Actions tab, select **Build Dipesh AI APK**, and run it manually, or push a commit to main. Download the Dipesh-AI-debug-apk artifact only after the workflow succeeds.
 
