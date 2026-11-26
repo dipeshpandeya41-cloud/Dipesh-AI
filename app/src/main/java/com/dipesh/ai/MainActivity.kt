@@ -588,7 +588,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${tasks.length()}")
             .setItems(labels) { _, which ->
                 val task = tasks.getJSONObject(which)
-                task.put("done", !task.optBoolean("done"))
+                val completed = !task.optBoolean("done")
+                task.put("done", completed)
+                if (completed) cancelLocalReminder(task)
                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
                 showTasksHub()
             }
@@ -652,6 +654,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
         val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        if (tasks.length() >= 100) {
+            alarm.cancel(pending)
+            toast("Task limit reached (100).")
+            return
+        }
         tasks.put(JSONObject().put("title", title).put("done", false)
             .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId))
         prefs.edit().putString("local_tasks", tasks.toString()).apply()
@@ -664,6 +671,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         if (requestCode == reminderPermissionRequest) {
             toast(if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 "Notifications allowed. Add the reminder again." else "Notifications are disabled; enable them in Android Settings.")
+        }
+    }
+
+    private fun cancelLocalReminder(task: JSONObject) {
+        val id = task.optInt("reminder_id", 0)
+        if (id == 0) return
+        val intent = Intent(this, ReminderReceiver::class.java)
+        val pending = PendingIntent.getBroadcast(this, id, intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+        if (pending != null) {
+            (getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending)
+            pending.cancel()
         }
     }
 
