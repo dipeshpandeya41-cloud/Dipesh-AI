@@ -1,24 +1,21 @@
 package com.dipesh.ai
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AgentProjectFilesTest {
+    private fun block(path: String, language: String, body: String): String {
+        val fence = String.fromCharCode(96).repeat(3)
+        return "FILE: $path\n$fence$language\n$body\n$fence"
+    }
+
     @Test
     fun extractsMultipleFilesAndPreservesRelativePaths() {
-        val markdown = """
-            ## Project files
-            FILE: src/main.py
-            ```python
-            print("hello")
-            ```
-            FILE: requirements.txt
-            ```text
-            requests
-            ```
-        """.trimIndent()
+        val markdown = listOf(
+            block("src/main.py", "python", "print(\"hello\")"),
+            block("requirements.txt", "text", "requests")
+        ).joinToString("\n")
 
         val files = AgentProjectFiles.parse(markdown)
         assertEquals(listOf("src/main.py", "requirements.txt"), files.map { it.first })
@@ -27,28 +24,13 @@ class AgentProjectFilesTest {
 
     @Test
     fun rejectsTraversalAbsoluteAndInvalidPaths() {
-        val markdown = """
-            FILE: ../escape.txt
-            ```text
-            bad
-            ```
-            FILE: /absolute.txt
-            ```text
-            bad
-            ```
-            FILE: C:/drive.txt
-            ```text
-            bad
-            ```
-            FILE: src/../../escape.py
-            ```python
-            bad
-            ```
-            FILE: safe/main.py
-            ```python
-            print("safe")
-            ```
-        """.trimIndent()
+        val markdown = listOf(
+            block("../escape.txt", "text", "bad"),
+            block("/absolute.txt", "text", "bad"),
+            block("C:/drive.txt", "text", "bad"),
+            block("src/../../escape.py", "python", "bad"),
+            block("safe/main.py", "python", "print(\"safe\")")
+        ).joinToString("\n")
 
         val files = AgentProjectFiles.parse(markdown)
         assertEquals(listOf("safe/main.py"), files.map { it.first })
@@ -56,16 +38,10 @@ class AgentProjectFilesTest {
 
     @Test
     fun ignoresDuplicatePathsCaseInsensitively() {
-        val markdown = """
-            FILE: app.py
-            ```python
-            first
-            ```
-            FILE: APP.py
-            ```python
-            second
-            ```
-        """.trimIndent()
+        val markdown = listOf(
+            block("app.py", "python", "first"),
+            block("APP.py", "python", "second")
+        ).joinToString("\n")
 
         assertEquals(1, AgentProjectFiles.parse(markdown).size)
         assertTrue(AgentProjectFiles.parse(markdown).single().second.contains("first"))
@@ -80,8 +56,8 @@ class AgentProjectFilesTest {
 
     @Test
     fun limitsExportedFileCount() {
-        val markdown = (1..45).joinToString("\\n") { index ->
-            "FILE: file$index.txt\\n```text\\n$index\\n```"
+        val markdown = (1..45).joinToString("\n") { index ->
+            block("file$index.txt", "text", index.toString())
         }
         assertEquals(40, AgentProjectFiles.parse(markdown).size)
     }
