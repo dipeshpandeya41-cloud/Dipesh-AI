@@ -6,7 +6,7 @@ package com.dipesh.ai
  */
 object AgentProjectFiles {
     private val fileBlock = Regex(
-        "(?ims)^\\s*(?:#{1,6}\\s*)?FILE\\s*:\\s*([^\\r\\n]+)\\r?\\n\\s*```[a-zA-Z0-9_-]*\\s*\\r?\\n(.*?)\\r?\\n\\s*```"
+        "(?ims)^\\s*(?:#{1,6}\\s*)?FILE\\s*:\\s*([^\\r\\n]+)\\r?\\n\\s*\\x60{3}[a-zA-Z0-9_-]*\\s*\\r?\\n(.*?)\\r?\\n\\s*\\x60{3}"
     )
 
     fun parse(markdown: String): List<Pair<String, String>> {
@@ -14,16 +14,16 @@ object AgentProjectFiles {
         val seen = mutableSetOf<String>()
         for (match in fileBlock.findAll(markdown)) {
             if (files.size >= 40) break
-            val path = match.groupValues[1].trim().replace('\\\\', '/')
+            val path = match.groupValues[1].trim().replace('\\', '/')
             if (!isSafeRelativePath(path)) continue
             val key = path.lowercase()
             if (!seen.add(key)) continue
-            val contents = match.groupValues[2].trimEnd() + "\\n"
+            val contents = match.groupValues[2].trimEnd() + "\n"
             if (contents.length > 100_000) continue
             files.add(path to contents)
         }
         if (files.isEmpty()) {
-            files.add("README.md" to markdown.take(100_000).trimEnd() + "\\n")
+            files.add("README.md" to markdown.take(100_000).trimEnd() + "\n")
         }
         return files
     }
