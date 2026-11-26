@@ -400,8 +400,11 @@ Return a single complete, self-contained index.html in ONE html code fence, with
     }
 
     private fun showDevelopmentOutput(title: String, content: String, fileName: String) {
+        val displayContent = if (fileName.endsWith(".html")) {
+            Regex("(?is)```(?:html)?\\s*(.*?)```").find(content)?.groupValues?.get(1)?.trim() ?: content
+        } else content
         val editor = EditText(this).apply {
-            setText(content)
+            setText(displayContent)
             setTextColor(0xFF172033.toInt())
             setPadding(18, 12, 18, 12)
             minLines = 12
