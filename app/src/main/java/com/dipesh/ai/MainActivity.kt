@@ -144,6 +144,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             text = "🧹 चैट साफ़"
             setOnClickListener {
                 chat.text = "नमस्ते! मैं Dipesh AI हूँ।"
+                prefs.edit().remove("conversation_history").apply()
                 saveHistory()
             }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -512,7 +513,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         require(model.matches(Regex("[A-Za-z0-9._-]+"))) { "Model name सही नहीं है" }
         val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" +
             model + ":generateContent"
-        val parts = JSONArray().put(JSONObject().put("text", prompt))
+        val currentParts = JSONArray().put(JSONObject().put("text", prompt))
         if (bitmap != null) {
             val scaled = scaleBitmap(bitmap)
             val bytes = ByteArrayOutputStream().use { out ->
@@ -520,10 +521,24 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 out.toByteArray()
             }
             val encoded = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-            parts.put(JSONObject().put("inline_data", JSONObject()
+            currentParts.put(JSONObject().put("inline_data", JSONObject()
                 .put("mime_type", "image/jpeg").put("data", encoded)))
         }
-        val body = JSONObject().put("contents", JSONArray().put(JSONObject().put("parts", parts)))
+        val savedHistory = try {
+            JSONArray(prefs.getString("conversation_history", "[]").orEmpty())
+        } catch (_: Exception) { JSONArray() }
+        val contents = JSONArray()
+        for (i in 0 until savedHistory.length()) {
+            val item = savedHistory.optJSONObject(i) ?: continue
+            val role = item.optString("role")
+            val text = item.optString("text")
+            if ((role == "user" || role == "model") && text.isNotBlank()) {
+                contents.put(JSONObject().put("role", role).put("parts",
+                    JSONArray().put(JSONObject().put("text", text))))
+            }
+        }
+        contents.put(JSONObject().put("role", "user").put("parts", currentParts))
+        val body = JSONObject().put("contents", contents)
             .put("generationConfig", JSONObject().put("temperature", 0.6).put("maxOutputTokens", 1200))
         val memory = prefs.getString("assistant_memory", "").orEmpty().trim()
         if (memory.isNotBlank()) {
@@ -547,9 +562,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             if (code !in 200..299) throw IllegalStateException("Gemini API error " + code + ": " + response.take(240))
             val candidates = JSONObject(response).getJSONArray("candidates")
             val contentParts = candidates.getJSONObject(0).getJSONObject("content").getJSONArray("parts")
-            return (0 until contentParts.length()).mapNotNull { i ->
+            val answer = (0 until contentParts.length()).mapNotNull { i ->
                 contentParts.getJSONObject(i).optString("text").takeIf { it.isNotBlank() }
             }.joinToString("\n").ifBlank { "AI से खाली जवाब मिला।" }
+            savedHistory.put(JSONObject().put("role", "user").put("text", prompt))
+            savedHistory.put(JSONObject().put("role", "model").put("text", answer))
+            val trimmedHistory = JSONArray()
+            val first = (savedHistory.length() - 12).coerceAtLeast(0)
+            for (i in first until savedHistory.length()) trimmedHistory.put(savedHistory.getJSONObject(i))
+            prefs.edit().putString("conversation_history", trimmedHistory.toString()).apply()
+            return answer
         } finally { connection.disconnect() }
     }
 
