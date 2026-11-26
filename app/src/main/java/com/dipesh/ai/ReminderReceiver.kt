@@ -22,6 +22,10 @@ class ReminderReceiver : BroadcastReceiver() {
             snoozeReminder(context, intent.getIntExtra(EXTRA_ID, 0))
             return
         }
+        if (intent.action == ACTION_COMPLETE) {
+            completeReminder(context, intent.getIntExtra(EXTRA_ID, 0))
+            return
+        }
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "DIPESH AI reminder"
         val id = intent.getIntExtra(EXTRA_ID, 1)
         val channelId = "dipesh_ai_reminders"
@@ -44,12 +48,19 @@ class ReminderReceiver : BroadcastReceiver() {
         }
         val snoozePending = PendingIntent.getBroadcast(context, id + 1000000, snoozeIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val completeIntent = Intent(context, ReminderReceiver::class.java).apply {
+            action = ACTION_COMPLETE
+            putExtra(EXTRA_ID, id)
+        }
+        val completePending = PendingIntent.getBroadcast(context, id + 2000000, completeIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification = builder
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
             .setContentText("Your scheduled reminder")
             .setContentIntent(contentIntent)
             .addAction(android.R.drawable.ic_lock_idle_alarm, "Snooze 10 min", snoozePending)
+            .addAction(android.R.drawable.checkbox_on_background, "Mark done", completePending)
             .setAutoCancel(true)
             .build()
         manager.notify(id, notification)
@@ -59,8 +70,33 @@ class ReminderReceiver : BroadcastReceiver() {
 
     companion object {
         const val ACTION_SNOOZE = "com.dipesh.ai.ACTION_SNOOZE"
+        const val ACTION_COMPLETE = "com.dipesh.ai.ACTION_COMPLETE"
         const val EXTRA_TITLE = "reminder_title"
         const val EXTRA_ID = "reminder_id"
+
+        private fun completeReminder(context: Context, reminderId: Int) {
+            if (reminderId == 0) return
+            val preferences = context.getSharedPreferences("dipesh_ai", Context.MODE_PRIVATE)
+            val tasks = try { JSONArray(preferences.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+            var found = false
+            for (index in 0 until tasks.length()) {
+                val task = tasks.optJSONObject(index) ?: continue
+                if (task.optInt("reminder_id", 0) == reminderId) {
+                    task.put("done", true)
+                    found = true
+                    break
+                }
+            }
+            if (found) preferences.edit().putString("local_tasks", tasks.toString()).apply()
+            val alarmIntent = Intent(context, ReminderReceiver::class.java)
+            val pending = PendingIntent.getBroadcast(context, reminderId, alarmIntent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+            if (pending != null) {
+                (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending)
+                pending.cancel()
+            }
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(reminderId)
+        }
 
         private fun snoozeReminder(context: Context, reminderId: Int) {
             if (reminderId == 0) return
