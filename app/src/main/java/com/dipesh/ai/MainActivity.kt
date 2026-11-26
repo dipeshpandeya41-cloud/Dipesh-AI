@@ -939,9 +939,9 @@ Return a single complete, self-contained index.html in ONE html code fence, with
             requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 41)
             return
         }
+        val language = prefs.getString("speech_language", "hi-IN").orEmpty()
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            val language = prefs.getString("speech_language", "hi-IN").orEmpty()
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
             putExtra(RecognizerIntent.EXTRA_PROMPT, "बोलें / Speak")
         }
