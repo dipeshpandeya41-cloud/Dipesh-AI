@@ -23,6 +23,7 @@ DIPESH AI is being developed as a polished Android assistant for Hindi and mixed
 - Images hub for camera, gallery, and user-approved screenshot analysis
 - On-device Library for saved notes and imported text files with offline keyword search
 - Offline task manager: add up to 100 local tasks, mark them complete, and clear completed items
+- Local scheduled reminders: choose a date/time and receive an Android notification; completing a reminder task cancels its pending alarm
 - Customize menu with persistent dark/light appearance preference
 - Projects hub for reopening up to 20 saved AI agent and website outputs
 - Scheduled alarm handoff to Android Clock with user review and confirmation
@@ -86,3 +87,7 @@ Gemini online features require your own API key. Keep it private: do not paste i
 
 
 - Offline date utilities use the Android device's local clock and support age calculations and day differences for `YYYY-MM-DD` or `DD/MM/YYYY` dates. They require no network or API key; age/date outputs depend on the device clock.
+
+
+## Local reminders
+The Tasks hub can schedule a device-local reminder using Android's inexact alarm API and notification channel. Android 13+ requires notification permission. Reminders are stored in app preferences and are scheduled locally without a server, API key, paid service, or exact-alarm special access. Android may defer inexact alarms, and pending alarms are cleared by a device reboot in this version; schedule them again after restarting the phone. Completing a reminder task cancels its pending alarm. Verify notification permission and battery settings on the target device.
