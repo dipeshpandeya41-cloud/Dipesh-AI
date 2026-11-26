@@ -584,7 +584,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val task = tasks.getJSONObject(i)
             val due = task.optLong("due_at", 0L)
             val dueLabel = if (due > 0L) " • " + SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(due)) else ""
-            (if (task.optBoolean("done")) "✓ " else "○ ") + task.optString("title", "Task") + dueLabel
+            (if (task.optBoolean("done")) "✓ " else "○ ") + task.optString("title", "Task") + dueLabel + if (task.optBoolean("repeat_daily")) " • Daily" else ""
         }.toTypedArray()
         val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${tasks.length()}")
             .setItems(labels) { _, which ->
