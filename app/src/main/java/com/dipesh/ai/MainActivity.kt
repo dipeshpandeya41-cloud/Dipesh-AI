@@ -1976,44 +1976,100 @@ Return a multi-file website project. For EACH file, write a heading exactly like
     }
 
     private fun showPhoneAccessHub() {
-        val message = """
-            Screen access: Android asks for your approval before each screen-capture session.
-            
-            Camera: Opens the Android camera app when you choose to take a photo. DIPESH AI does not turn on the camera in the background.
-            
-            Installed apps: Shows apps Android makes available for launching. Choose an app to open it; other apps' private data is not accessible.
-            
-            Phone controls: Back, Home, Notifications and Quick Settings are available only through the explicitly enabled Accessibility shortcuts.
-        """.trimIndent()
-        val choices = arrayOf(
-            "Capture current screen",
-            "Open camera",
-            "Choose a photo",
-            "Browse installed apps",
-            "Manage DIPESH AI permissions",
-            "Accessibility settings"
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(18, 8, 18, 8)
+        }
+        fun addStatus(label: String, status: String, detail: String) {
+            content.addView(TextView(this).apply {
+                text = "$label  •  $status\\n$detail"
+                textSize = 13f
+                setTextColor(0xFF26384B.toInt())
+                setPadding(12, 10, 12, 10)
+                background = GradientDrawable().apply {
+                    setColor(0xFFEAF2F8.toInt())
+                    cornerRadius = 12f
+                    setStroke(1, 0xFFD0DFEA.toInt())
+                }
+            }, matchWidth())
+            content.addView(View(this).apply { minimumHeight = 7 })
+        }
+        addStatus(
+            "Microphone",
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) "Allowed" else "Not allowed",
+            "Used only after you start voice input."
         )
-        AlertDialog.Builder(this)
-            .setTitle("Phone Access Hub")
-            .setMessage(message)
-            .setItems(choices) { _, which ->
-                when (which) {
-                    0 -> requestScreenCapture()
-                    1 -> openCamera()
-                    2 -> choosePhoto()
-                    3 -> openInstalledAppChooser()
-                    4 -> {
-                        val settings = Intent(
-                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts("package", packageName, null)
-                        )
-                        launchSafely(settings)
-                    }
-                    5 -> launchSafely(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        addStatus(
+            "Accessibility shortcuts",
+            if (isDipeshAccessibilityEnabled()) "Enabled" else "Not enabled",
+            "Android controls Back, Home, Notifications and Quick Settings. No hidden screen reading or automatic tapping."
+        )
+        addStatus(
+            "Screen capture",
+            "Approval required",
+            "Android asks you to approve each capture session. Access is not continuous."
+        )
+        addStatus(
+            "Camera",
+            "External camera app",
+            "DIPESH AI opens your camera app only when you tap the camera action."
+        )
+        addStatus(
+            "Installed apps",
+            "User-selected launch",
+            "Choose an app from the searchable list. This does not grant access to its private data."
+        )
+
+        lateinit var dialog: AlertDialog
+        fun addAction(title: String, detail: String, action: () -> Unit) {
+            val button = Button(this).apply {
+                text = "$title\\n$detail"
+                isAllCaps = false
+                setOnClickListener {
+                    dialog.dismiss()
+                    action()
                 }
             }
+            content.addView(button, matchWidth())
+        }
+        addAction("🎙 Request microphone permission", "Needed for voice input") {
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                toast("Microphone permission is already allowed.")
+            } else requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 41)
+        }
+        addAction("🖥 Capture current screen", "Android approval appears each time") { requestScreenCapture() }
+        addAction("📷 Open camera", "Launch the camera app") { openCamera() }
+        addAction("🖼 Choose a photo", "Select a photo you want to share") { choosePhoto() }
+        addAction("📱 Browse and launch installed apps", "Search and choose one app") { openInstalledAppChooser() }
+        addAction("♿ Accessibility settings", "Enable or review optional shortcuts") {
+            launchSafely(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+        addAction("⚙ DIPESH AI app permissions", "Review Android permission controls") {
+            launchSafely(Intent(
+                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", packageName, null)
+            ))
+        }
+
+        val scroll = ScrollView(this).apply { addView(content) }
+        dialog = AlertDialog.Builder(this)
+            .setTitle("Phone Access Hub")
+            .setView(scroll)
             .setNegativeButton("Close", null)
-            .show()
+            .create()
+        dialog.show()
+    }
+
+    private fun isDipeshAccessibilityEnabled(): Boolean {
+        val enabledServices = android.provider.Settings.Secure.getString(
+            contentResolver,
+            android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ).orEmpty()
+        val component = android.content.ComponentName(
+            this,
+            DipeshAccessibilityService::class.java
+        ).flattenToString()
+        return enabledServices.split(':').any { it.equals(component, ignoreCase = true) }
     }
 
     private fun openInstalledAppChooser() {
