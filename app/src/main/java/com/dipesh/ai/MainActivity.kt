@@ -618,6 +618,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         labels.add("⇧ Import task CSV backup")
         labels.add("✕ Clear completed tasks")
         labels.add("✓ Complete visible active tasks")
+        labels.add("✕ Delete visible tasks")
         sortedIndices.forEach { i ->
             val task = tasks.getJSONObject(i)
             val due = task.optLong("due_at", 0L)
@@ -696,6 +697,34 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         }.show()
                     return@setItems
                 }
+                if (which == 7) {
+                    val visibleSet = sortedIndices.toSet()
+                    if (visibleSet.isEmpty()) {
+                        toast("There are no visible tasks to delete.")
+                        return@setItems
+                    }
+                    AlertDialog.Builder(this)
+                        .setTitle("Delete visible tasks?")
+                        .setMessage("Permanently delete ${visibleSet.size} task(s) currently shown by this filter and search? Hidden tasks will remain. Reminders for deleted tasks will be cancelled.")
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Delete") { _, _ ->
+                            val remaining = JSONArray()
+                            var removed = 0
+                            for (index in 0 until tasks.length()) {
+                                val item = tasks.optJSONObject(index) ?: continue
+                                if (index in visibleSet) {
+                                    cancelLocalReminder(item)
+                                    removed++
+                                } else {
+                                    remaining.put(item)
+                                }
+                            }
+                            prefs.edit().putString("local_tasks", remaining.toString()).apply()
+                            toast("Deleted $removed visible task(s).")
+                            showTasksHub(filter, query, sort)
+                        }.show()
+                    return@setItems
+                }
                 if (which == 2) {
                     val sortLabels = arrayOf("Newest first", "Due date (soonest)", "Priority (high first)")
                     val sortValues = arrayOf("NEWEST", "DUE", "PRIORITY")
@@ -716,7 +745,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         }.setNegativeButton("Cancel", null).show()
                     return@setItems
                 }
-                val taskPosition = which - 7
+                val taskPosition = which - 8
                 if (taskPosition !in sortedIndices.indices) return@setItems
                 val taskIndex = sortedIndices[taskPosition]
                 val task = tasks.getJSONObject(taskIndex)
