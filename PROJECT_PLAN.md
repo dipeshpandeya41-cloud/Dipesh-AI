@@ -177,3 +177,11 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Retry restoration on app startup and after notification permission is granted.
 - Skip completed, expired, or malformed reminder entries; do not request exact-alarm special access.
 - Keep all reminder data on-device.
+
+
+### 12. Task editing and recurring reminders
+- Add task edit-title and delete actions in the local Tasks hub.
+- Add one-time and daily repeat choices to reminder scheduling.
+- Add a notification action to snooze a reminder for ten minutes and update the stored due time.
+- Re-arm daily reminders after each delivery and retain boot recovery.
+- Keep all task and reminder state on-device; use inexact alarms without exact-alarm special access.
