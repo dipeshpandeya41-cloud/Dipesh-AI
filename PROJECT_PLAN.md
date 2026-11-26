@@ -10,7 +10,7 @@ The current source tree contains:
 - Native Android application written in Kotlin using Android Views.
 - Gemini generateContent request code with a configurable model (default: gemini-2.5-flash), plus a visible connection status for offline, saved-key, connecting, success, and failure states.
 - Android Keystore-backed AES-GCM storage for the Gemini API key; requests use the `x-goog-api-key` header.
-- Configurable speech-recognition locale, installed TTS voice cycling, a user-selected text/CSV file picker, and a Termux launcher shortcut.
+- Configurable speech-recognition locale, installed TTS-language selection and voice cycling, a user-selected text/CSV file picker, and a Termux launcher shortcut.
 - Hindi speech recognition intent and Android Text-to-Speech output.
 - Camera capture and gallery image selection followed by Gemini image analysis.
 - One-time screen capture using Android MediaProjection consent before analysis.
