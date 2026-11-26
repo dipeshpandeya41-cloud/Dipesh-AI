@@ -17,6 +17,7 @@ The current source tree contains:
 - Local conversation-history persistence using app preferences.
 - Basic offline replies when no API key is configured.
 - Phone Settings and Dialer shortcuts.
+- User-driven installed-app chooser via Android's system resolver; user selects which app to open.
 - Accessibility Service with user-invoked Back, Home, Notifications, and Quick Settings actions.
 - GitHub Actions workflow that builds a debug APK and uploads it as an artifact.
 
@@ -54,6 +55,7 @@ These are observations from source code, not a claim that every feature has pass
 
 ### 6. Phone tools and automation
 - Provide shortcuts to Android Settings and the Dialer.
+- Let the user open an installed app through Android's system app chooser; do not silently launch or control an arbitrary app.
 - Keep Accessibility actions transparent and user-triggered.
 - Ask for relevant Android permissions before actions that need them.
 - Do not send messages, place calls, change settings, or make purchases without a clear user action and appropriate system confirmation.
