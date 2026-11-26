@@ -6,7 +6,7 @@ import org.junit.Test
 
 class AgentProjectFilesTest {
     private fun block(path: String, language: String, body: String): String {
-        val fence = String.fromCharCode(96).repeat(3)
+        val fence = 96.toChar().toString().repeat(3)
         return "FILE: $path\n$fence$language\n$body\n$fence"
     }
 
