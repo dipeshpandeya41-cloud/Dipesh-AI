@@ -10,6 +10,7 @@ import android.content.Intent
 import android.app.AlarmManager
 import org.json.JSONArray
 import android.os.Build
+import java.util.Calendar
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -94,19 +95,28 @@ class ReminderReceiver : BroadcastReceiver() {
         private fun scheduleNextDailyOccurrence(context: Context, reminderId: Int) {
             val preferences = context.getSharedPreferences("dipesh_ai", Context.MODE_PRIVATE)
             val tasks = try { JSONArray(preferences.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
-            val nextDue = System.currentTimeMillis() + 24L * 60L * 60L * 1000L
+            val now = System.currentTimeMillis()
+            var nextDue = 0L
             var title = "DIPESH AI reminder"
             var found = false
             for (index in 0 until tasks.length()) {
                 val task = tasks.optJSONObject(index) ?: continue
                 if (task.optInt("reminder_id", 0) == reminderId && task.optBoolean("repeat_daily") && !task.optBoolean("done")) {
+                    val anchor = task.optLong("repeat_anchor_at", task.optLong("due_at", now))
+                    val next = Calendar.getInstance().apply {
+                        timeInMillis = anchor
+                        add(Calendar.DAY_OF_YEAR, 1)
+                        while (timeInMillis <= now) add(Calendar.DAY_OF_YEAR, 1)
+                    }
+                    nextDue = next.timeInMillis
                     task.put("due_at", nextDue)
+                    if (task.optLong("repeat_anchor_at", 0L) == 0L) task.put("repeat_anchor_at", anchor)
                     title = task.optString("title", title)
                     found = true
                     break
                 }
             }
-            if (!found) return
+            if (!found || nextDue <= now) return
             preferences.edit().putString("local_tasks", tasks.toString()).apply()
             val nextIntent = Intent(context, ReminderReceiver::class.java).apply {
                 putExtra(EXTRA_TITLE, title)
