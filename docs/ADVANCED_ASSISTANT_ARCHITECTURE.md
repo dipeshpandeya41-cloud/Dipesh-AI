@@ -105,3 +105,9 @@ Requests are initiated by the user, use HTTPS GET, have connection/read timeouts
 ## Free public holiday calendar
 
 The Free API Hub includes Nager.Date v4 public holidays. Users enter a two-letter ISO country code (for example, `NP` or `IN`); the app requests the current calendar year's holiday list and displays dates, names, and available holiday types. The public REST endpoint does not require an API key or paid subscription; use it fairly and check current provider availability and terms. Official project and endpoint examples: [Nager.Date](https://github.com/nager/Nager.Date) and [REST API v4 examples](https://github.com/nager/Nager.Date/blob/main/doc/examples/rest-api.md).
+
+## Free knowledge and book search
+
+The Free API Hub includes Wikipedia article search via the Wikimedia REST API and Open Library book metadata search. Both use public no-key endpoints. Wikimedia documents its REST interface for wiki content and search. <https://www.mediawiki.org/wiki/API:REST_API> Open Library supports JSON search and asks applications to identify themselves, cache responses, and keep request volume modest; its default anonymous rate is one request per second. <https://openlibrary.org/developers/api>
+
+Results include source-page links. Wikipedia content should be checked against cited references for important decisions. Open Library search results are bibliographic metadata and do not promise that a book is available for free download. These services are intended for interactive user searches, not bulk harvesting.
