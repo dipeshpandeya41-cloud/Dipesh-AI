@@ -141,3 +141,5 @@ The roadmap describes intended work. A feature should be called complete only af
 The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.md](docs/ADVANCED_ASSISTANT_ARCHITECTURE.md). It covers provider switching, user-controlled memory, multilingual installed voices, selected-file access, CSV/XLSX workflows, Termux, GitHub coding workflows, safe skill loading, Android automation, and paired computer/TV/smart-device integrations. These are not all implemented yet. Each item must pass build and real-device verification before being marked complete.
 
 - Website project export: package the edited `index.html`, setup notes, and assets folder placeholder into a ZIP using Android's built-in ZIP stream and document picker.
+
+- Multi-file website generation and packaging: generate HTML/CSS/JS as separate files, validate relative ZIP paths, and export the project as a ZIP using Android's document picker.
