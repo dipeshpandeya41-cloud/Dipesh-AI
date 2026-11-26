@@ -7,7 +7,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import androidx.core.app.NotificationCompat
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -24,13 +23,14 @@ class ReminderReceiver : BroadcastReceiver() {
         }
         val contentIntent = PendingIntent.getActivity(context, id, openApp,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification = NotificationCompat.Builder(context, channelId)
+        val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(context, channelId)
+            else @Suppress("DEPRECATION") Notification.Builder(context)
+        val notification = builder
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
             .setContentText("Your scheduled reminder")
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
         manager.notify(id, notification)
     }
