@@ -75,3 +75,5 @@ Gemini online features require your own API key. Keep it private: do not paste i
 - Website ZIP export: generated website projects can be exported through Android's document picker as a ZIP containing `index.html`, a README, and an assets folder placeholder. No hosting service or paid dependency is required.
 
 - Multi-file website generation: website output uses separate `index.html`, `styles.css`, and `script.js` files when appropriate. ZIP export preserves safe relative paths and includes a README.
+
+- Free translation: optional MyMemory public translation endpoint with no API key, language-code inputs, a 1,500-character per-request guard, and a privacy warning. Public service limits and availability apply.
