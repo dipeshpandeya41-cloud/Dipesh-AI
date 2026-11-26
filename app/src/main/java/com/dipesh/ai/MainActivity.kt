@@ -578,18 +578,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }.show()
     }
 
-    private fun showTasksHub(filter: String = "ALL") {
+    private fun showTasksHub(filter: String = "ALL", query: String = "") {
         val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
         val visibleIndices = (0 until tasks.length()).filter { i ->
             val task = tasks.getJSONObject(i)
-            when (filter) {
+            val matchesFilter = when (filter) {
                 "ACTIVE" -> !task.optBoolean("done")
                 "COMPLETED" -> task.optBoolean("done")
                 "HIGH" -> !task.optBoolean("done") && task.optString("priority", "MEDIUM") == "HIGH"
                 else -> true
             }
+            matchesFilter && task.optString("title", "Task").contains(query, ignoreCase = true)
         }
-        val labels = mutableListOf("⚙ Filter: " + when (filter) {
+        val labels = mutableListOf("⌕ Search: " + if (query.isBlank()) "All tasks" else query, "⚙ Filter: " + when (filter) {
             "ACTIVE" -> "Active tasks"
             "COMPLETED" -> "Completed tasks"
             "HIGH" -> "High priority"
@@ -604,16 +605,31 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${visibleIndices.size}/${tasks.length()}")
             .setItems(labels.toTypedArray()) { _, which ->
                 if (which == 0) {
+                    val searchInput = EditText(this).apply {
+                        hint = "Search task titles"
+                        setSingleLine(true)
+                        setText(query)
+                        setSelection(text.length)
+                    }
+                    AlertDialog.Builder(this).setTitle("Search tasks")
+                        .setView(searchInput)
+                        .setNegativeButton("Cancel", null)
+                        .setNeutralButton("Clear") { _, _ -> showTasksHub(filter, "") }
+                        .setPositiveButton("Search") { _, _ -> showTasksHub(filter, searchInput.text.toString().trim()) }
+                        .show()
+                    return@setItems
+                }
+                if (which == 1) {
                     val filters = arrayOf("All tasks", "Active tasks", "Completed tasks", "High priority")
                     val values = arrayOf("ALL", "ACTIVE", "COMPLETED", "HIGH")
                     AlertDialog.Builder(this).setTitle("Filter tasks")
                         .setSingleChoiceItems(filters, values.indexOf(filter).coerceAtLeast(0)) { dialog, selected ->
                             dialog.dismiss()
-                            showTasksHub(values[selected])
+                            showTasksHub(values[selected], query)
                         }.setNegativeButton("Cancel", null).show()
                     return@setItems
                 }
-                val taskIndex = visibleIndices[which - 1]
+                val taskIndex = visibleIndices[which - 2]
                 val task = tasks.getJSONObject(taskIndex)
                 val actions = arrayOf("Mark complete / reopen", "Edit task title", "Change priority", "Delete task")
                 AlertDialog.Builder(this).setTitle(task.optString("title", "Task"))
@@ -624,7 +640,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                 task.put("done", completed)
                                 if (completed) cancelLocalReminder(task)
                                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
-                                showTasksHub(filter)
+                                showTasksHub(filter, query)
                             }
                             1 -> showEditLocalTask(tasks, taskIndex)
                             2 -> showTaskPriorityPicker(tasks, taskIndex)
