@@ -51,4 +51,26 @@ class TaskCsvParserTest {
             TaskCsvParser.parseRecords("title\n\"unfinished")
         }
     }
+
+    @Test
+    fun rejectsQuoteInsideUnquotedField() {
+        assertThrows(IllegalArgumentException::class.java) {
+            TaskCsvParser.parseRecords("title\npart\"broken\"")
+        }
+    }
+
+    @Test
+    fun rejectsCharactersAfterClosingQuote() {
+        assertThrows(IllegalArgumentException::class.java) {
+            TaskCsvParser.parseRecords("title\n\"valid\"oops")
+        }
+    }
+
+    @Test
+    fun acceptsEmptyQuotedFieldsAndTrailingEmptyColumns() {
+        assertEquals(
+            listOf(listOf("title", "note"), listOf("", "")),
+            TaskCsvParser.parseRecords("title,note\n\"\",\"\"")
+        )
+    }
 }
