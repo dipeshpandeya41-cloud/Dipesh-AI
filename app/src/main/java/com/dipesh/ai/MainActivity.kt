@@ -325,6 +325,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }.setNegativeButton("Close", null).show()
     }
 
+    private fun openLibraryFile() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/*"
+        }
+        try { startActivityForResult(intent, 50) }
+        catch (_: Exception) { toast("File picker unavailable.") }
+    }
+
     private fun showLibraryHub() {
         val editor = EditText(this).apply {
             hint = "Notes, prompts, snippets, and reference text"
@@ -335,7 +344,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         AlertDialog.Builder(this).setTitle("Library • On-device notes")
             .setView(ScrollView(this).apply { addView(editor) })
-            .setNeutralButton("Import text file") { _, _ -> openTextFile() }
+            .setNeutralButton("Import text file") { _, _ -> openLibraryFile() }
             .setNegativeButton("Close", null)
             .setPositiveButton("Save") { _, _ ->
                 prefs.edit().putString("library_notes", editor.text.toString().take(50000)).apply()
@@ -399,15 +408,24 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun showScheduledHub() {
+        val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(12, 4, 12, 4) }
         val message = EditText(this).apply { hint = "Reminder or alarm label"; setSingleLine(true) }
+        val time = android.widget.TimePicker(this).apply { setIs24HourView(true) }
+        panel.addView(message)
+        panel.addView(TextView(this).apply { text = "Choose alarm time"; textSize = 14f })
+        panel.addView(time)
         AlertDialog.Builder(this).setTitle("Schedule an alarm")
             .setMessage("DIPESH AI will open your Android Clock app. Review and confirm the alarm there.")
-            .setView(message)
+            .setView(panel)
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Continue") { _, _ ->
                 val label = message.text.toString().trim().ifBlank { "DIPESH AI reminder" }
+                val hour = if (Build.VERSION.SDK_INT >= 23) time.hour else time.currentHour
+                val minute = if (Build.VERSION.SDK_INT >= 23) time.minute else time.currentMinute
                 val intent = Intent(android.provider.AlarmClock.ACTION_SET_ALARM).apply {
                     putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, label)
+                    putExtra(android.provider.AlarmClock.EXTRA_HOUR, hour)
+                    putExtra(android.provider.AlarmClock.EXTRA_MINUTES, minute)
                     putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, false)
                 }
                 if (intent.resolveActivity(packageManager) != null) launchSafely(intent)
@@ -839,6 +857,16 @@ Return a single complete, self-contained index.html in ONE html code fence, with
                     } catch (_: Exception) {
                         toast("CSV फ़ाइल सेव नहीं हो सकी।")
                     }
+                }
+            }
+            50 -> {
+                val uri = data.data
+                if (uri != null) {
+                    try {
+                        val imported = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        prefs.edit().putString("library_notes", (prefs.getString("library_notes", "").orEmpty() + "\n" + imported).take(50000)).apply()
+                        toast("Imported text into Library.")
+                    } catch (_: Exception) { toast("Could not import this file.") }
                 }
             }
             49 -> {
