@@ -56,8 +56,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         super.onCreate(savedInstanceState)
         tts = TextToSpeech(this, this)
         val legacyKey = prefs.getString("key", "").orEmpty()
-        if (legacyKey.isNotBlank() && secureKeys.read().isNullOrBlank()) secureKeys.save(legacyKey)
-        prefs.edit().remove("key").apply()
+        if (legacyKey.isNotBlank()) {
+            if (secureKeys.read().isNullOrBlank()) {
+                try {
+                    secureKeys.save(legacyKey)
+                    if (!secureKeys.read().isNullOrBlank()) prefs.edit().remove("key").apply()
+                } catch (_: Exception) {
+                    // Preserve the old value rather than lose the credential if Keystore is unavailable.
+                }
+            } else {
+                prefs.edit().remove("key").apply()
+            }
+        }
         buildScreen()
         chat.text = prefs.getString("history", chat.text.toString())
         val filter = IntentFilter(ScreenCaptureService.ACTION_RESULT)
@@ -188,6 +198,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val key = EditText(this).apply {
             hint = "अपनी Gemini API key डालें"
             setSingleLine(true)
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             setText(secureKeys.read().orEmpty())
         }
         panel.addView(TextView(this).apply {
