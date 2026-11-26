@@ -6,7 +6,10 @@ DIPESH AI is being developed as a polished Android assistant for Hindi and mixed
 
 ## What is in the repository now
 - Kotlin Android app using Android Views
-- Gemini chat and image-analysis request code
+- Gemini chat and image-analysis request code; API credentials encrypted using Android Keystore and sent in the `x-goog-api-key` header
+- Configurable speech-recognition locale and cycling through voices installed on the device
+- User-selected text/CSV file import into the message composer
+- Optional Termux app launcher
 - Hindi speech-recognition input and Text-to-Speech output
 - Camera and gallery image selection
 - Permission-based one-time screen capture for AI understanding
@@ -27,7 +30,7 @@ The goal is to turn the current foundation into a complete, polished Android app
 6. Improve safe, transparent, user-triggered phone automation.
 7. Run builds and test the APK before release.
 
-See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full product requirements, current baseline, privacy rules, and delivery roadmap.
+See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the full product requirements, current baseline, privacy rules, and delivery roadmap. See [docs/ADVANCED_ASSISTANT_ARCHITECTURE.md](docs/ADVANCED_ASSISTANT_ARCHITECTURE.md) for the free-first architecture, planned modules, and capability boundaries.
 
 ## Build the debug APK
 The repository has a GitHub Actions workflow:
@@ -38,7 +41,7 @@ The repository has a GitHub Actions workflow:
 5. Download the **Dipesh-AI-debug-apk** artifact.
 
 ## API key and privacy
-Gemini online features require your own API key. Keep it private: do not paste it into chat, commit it to GitHub, or include it in screenshots. Screen understanding must remain user-initiated and use Android's system permission prompt.
+Gemini online features require your own API key. Keep it private: do not paste it into chat, commit it to GitHub, or include it in screenshots. The app stores it encrypted with Android Keystore; it is not stored in model memory. Screen understanding must remain user-initiated and use Android's system permission prompt.
 
 ## Project details
 - Repository: dipeshpandeya41-cloud/Dipesh-AI
