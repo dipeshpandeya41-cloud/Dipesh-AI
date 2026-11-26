@@ -4,6 +4,8 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.BroadcastReceiver
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.IntentFilter
 import android.media.projection.MediaProjectionManager
@@ -174,6 +176,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         root.addView(input, matchWidth())
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         actions.addView(Button(this).apply {
+            text = "📊 Excel में कॉपी"
+            setOnClickListener { copyForSpreadsheet() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        actions.addView(Button(this).apply {
             text = "🎙 बोलें"
             setOnClickListener { startVoiceInput() }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -262,6 +268,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             .setNegativeButton("बंद", null)
             .show()
+    }
+
+    private fun copyForSpreadsheet() {
+        val content = input.text.toString()
+        if (content.isBlank()) {
+            toast("पहले CSV या tab-separated डेटा लिखें या फ़ाइल खोलें।")
+            return
+        }
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("DIPESH AI spreadsheet data", content))
+        toast("डेटा कॉपी हो गया। Excel/Sheets में सेल चुनकर Paste करें।")
     }
 
     private fun openTermux() {
