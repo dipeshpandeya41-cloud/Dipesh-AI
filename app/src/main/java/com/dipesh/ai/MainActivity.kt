@@ -348,14 +348,29 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun openInstalledAppChooser() {
-        // Android's system resolver presents launcher activities; the user chooses
-        // which installed app to open. DIPESH AI does not enumerate or control apps.
-        val launchIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        try {
-            startActivity(Intent.createChooser(launchIntent, "Choose an app to open"))
-        } catch (_: Exception) {
-            toast("No app launcher is available on this device.")
+        // Only query launcher activities; Android package visibility is declared
+        // narrowly in the manifest. The user explicitly chooses the app to launch.
+        val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps = packageManager.queryIntentActivities(query, 0)
+            .distinctBy { it.activityInfo.packageName }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase(Locale.ROOT) }
+
+        if (apps.isEmpty()) {
+            toast("No launchable apps were found.")
+            return
         }
+
+        val labels = apps.map { it.loadLabel(packageManager).toString() }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Choose an installed app")
+            .setItems(labels) { _, index ->
+                val selected = apps[index].activityInfo
+                val launch = packageManager.getLaunchIntentForPackage(selected.packageName)
+                if (launch != null) launchSafely(launch)
+                else toast("This app does not provide a launch screen.")
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun openTermux() {
