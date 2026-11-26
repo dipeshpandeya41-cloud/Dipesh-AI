@@ -49,4 +49,27 @@ class TaskCsvImportValidatorTest {
         assertEquals(false, result?.done)
         assertEquals(true, result?.repeatDaily)
     }
+
+    @Test
+    fun rejectsBlankTitleAndInvalidRepeatFlag() {
+        assertNull(TaskCsvImportValidator.parse(valid.toMutableList().also { it[0] = "   " }))
+        assertNull(TaskCsvImportValidator.parse(valid.toMutableList().also { it[5] = "sometimes" }))
+    }
+
+    @Test
+    fun rejectsMalformedDueDateAndReminderId() {
+        assertNull(TaskCsvImportValidator.parse(valid.toMutableList().also { it[3] = "tomorrow" }))
+        assertNull(TaskCsvImportValidator.parse(valid.toMutableList().also { it[4] = "abc" }))
+    }
+
+    @Test
+    fun normalizesPriorityAndLimitsTitleLength() {
+        val longTitle = "x".repeat(220)
+        val result = TaskCsvImportValidator.parse(valid.toMutableList().also {
+            it[0] = longTitle
+            it[2] = " low "
+        })
+        assertEquals(180, result?.title?.length)
+        assertEquals("LOW", result?.priority)
+    }
 }
