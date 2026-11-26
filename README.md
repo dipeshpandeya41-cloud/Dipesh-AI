@@ -71,3 +71,5 @@ Gemini online features require your own API key. Keep it private: do not paste i
 - Added Nager.Date public holiday lookup by two-letter country code for the current year; no API key or paid subscription required. Uses the provider's public REST API and fair-use expectations.
 
 - Free API Hub expanded with Wikipedia article search through the Wikimedia REST API, Open Library book/author metadata search, and Free Dictionary API English definitions/phonetics/examples. These are public no-key endpoints; usage policies and rate limits apply. Successful dictionary lookups are cached locally (up to 30 words) and can be reopened offline.
+
+- Website ZIP export: generated website projects can be exported through Android's document picker as a ZIP containing `index.html`, a README, and an assets folder placeholder. No hosting service or paid dependency is required.
