@@ -30,7 +30,6 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.Base64
 import java.util.Locale
 import kotlin.concurrent.thread
 
@@ -219,6 +218,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 prefs.edit().putString("model", model.text.toString().trim())
                     .putString("speech_language", speechLanguage.text.toString().trim().ifBlank { "hi-IN" }).apply()
                 secureKeys.save(key.text.toString().trim())
+                tts?.language = Locale.forLanguageTag(speechLanguage.text.toString().trim().ifBlank { "hi-IN" })
                 Toast.makeText(this@MainActivity, "सेटिंग सेव हो गई।", Toast.LENGTH_SHORT).show()
             }.show()
     }
@@ -405,7 +405,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 scaled.compress(Bitmap.CompressFormat.JPEG, 82, out)
                 out.toByteArray()
             }
-            val encoded = Base64.getEncoder().encodeToString(bytes)
+            val encoded = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
             parts.put(JSONObject().put("inline_data", JSONObject()
                 .put("mime_type", "image/jpeg").put("data", encoded)))
         }
