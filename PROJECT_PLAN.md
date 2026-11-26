@@ -198,3 +198,10 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Add a Mark done notification action alongside the ten-minute snooze action.
 - Persist completion state locally and cancel any future alarm, including daily recurrence.
 - Dismiss the notification after completion without requiring app navigation.
+
+
+### 15. Offline task priorities
+- Add LOW, MEDIUM, and HIGH priority labels to tasks and reminders.
+- Default new task records to MEDIUM for backward-compatible display.
+- Allow priority changes from the task action menu and show the selected priority in the task list.
+- Keep priority data local with no external API requirement.
