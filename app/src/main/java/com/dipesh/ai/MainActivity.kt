@@ -20,6 +20,9 @@ import android.provider.MediaStore
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.view.Gravity
+import android.view.View
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -113,6 +116,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setPadding(8, 4, 8, 10)
         }
         root.addView(connectionStatus, matchWidth())
+        root.addView(createCommandCenter(), matchWidth())
 
         val settingsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         settingsRow.addView(Button(this).apply {
@@ -256,6 +260,125 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         root.addView(actions, matchWidth())
         setContentView(root)
     }
+
+
+    private fun createCommandCenter(): LinearLayout {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(12, 12, 12, 12)
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(0xFF07182C.toInt(), 0xFF102D49.toInt(), 0xFF071426.toInt())
+            ).apply { cornerRadius = 22f; setStroke(1, 0xFF28C9F4.toInt()) }
+        }
+        panel.addView(TextView(this).apply {
+            text = "DIPESH AI  •  COMMAND CENTER"
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
+            letterSpacing = 0.08f
+            gravity = Gravity.CENTER
+            setTextColor(0xFF79E7FF.toInt())
+            setPadding(4, 2, 4, 8)
+        }, matchWidth())
+
+        val overview = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val aiStatus = if (secureKeys.read().isNullOrBlank()) "Offline" else "Key saved"
+        overview.addView(commandCard("SYSTEM STATUS", "AI: $aiStatus\nNetwork: On demand\nPrivacy: Local-first", 0xFF12344A.toInt()),
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        overview.addView(commandCard("PREDICTIVE ANALYTICS", "Live insights\nNot connected\nAsk Gemini to analyse data", 0xFF172B48.toInt()),
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        panel.addView(overview, matchWidth())
+
+        val core = TextView(this).apply {
+            text = "✧\n◉\n✧"
+            textSize = 34f
+            gravity = Gravity.CENTER
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(0xFF72E9FF.toInt())
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                intArrayOf(0xFF153D62.toInt(), 0xFF071B34.toInt(), 0xFF31234E.toInt())
+            ).apply { shape = GradientDrawable.OVAL; setStroke(2, 0xFF48DFFF.toInt()) }
+            elevation = 10f
+        }
+        val coreHolder = LinearLayout(this).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, 10, 0, 10)
+            addView(core, LinearLayout.LayoutParams(112.dp(), 112.dp()))
+        }
+        panel.addView(coreHolder, matchWidth())
+        panel.addView(commandCard("VOICE LOG  •  READY", "Voice input • Speech output\nTap the microphone below to speak", 0xFF10283E.toInt()), matchWidth())
+        panel.addView(TextView(this).apply {
+            text = "ASSISTANT OPTIONS"
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(0xFF79E7FF.toInt())
+            setPadding(4, 10, 4, 5)
+        })
+        val options = listOf(
+            "🎙 Voice" to { startVoiceInput() },
+            "🔎 Search" to { input.setText("Help me research: "); input.requestFocus() },
+            "📋 Projects" to { showProjectsHub() },
+            "🧠 Agent" to { showDevelopmentWorkspace(true) },
+            "🌐 Website" to { showDevelopmentWorkspace(false) },
+            "🛡 Privacy" to { showPrivacyInfo() }
+        )
+        options.chunked(3).forEach { group ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            group.forEach { item ->
+                val tile = TextView(this).apply {
+                    text = item.first
+                    textSize = 12f
+                    gravity = Gravity.CENTER
+                    setTextColor(0xFFE4F8FF.toInt())
+                    setPadding(4, 12, 4, 12)
+                    background = GradientDrawable().apply {
+                        setColor(0xFF12334D.toInt())
+                        cornerRadius = 12f
+                        setStroke(1, 0xFF287D9E.toInt())
+                    }
+                    setOnClickListener { item.second() }
+                }
+                val lp = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                lp.setMargins(3, 2, 3, 2)
+                row.addView(tile, lp)
+            }
+            panel.addView(row, matchWidth())
+        }
+        return panel
+    }
+
+    private fun commandCard(title: String, detail: String, fill: Int): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(9, 8, 9, 8)
+            background = GradientDrawable().apply {
+                setColor(fill)
+                cornerRadius = 12f
+                setStroke(1, 0xFF246C8B.toInt())
+            }
+            addView(TextView(this@MainActivity).apply {
+                text = title
+                textSize = 10f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(0xFF6FE5FF.toInt())
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = detail
+                textSize = 10f
+                setTextColor(0xFFD7EAF5.toInt())
+                setPadding(0, 5, 0, 0)
+            })
+        }
+    }
+
+    private fun showPrivacyInfo() {
+        AlertDialog.Builder(this).setTitle("Privacy and security")
+            .setMessage("Your API key is stored using Android Keystore encryption. Network requests are sent to Gemini only when you use online AI features. Images are sent only when you choose image analysis. Remote access is not enabled. Review generated code before running it.")
+            .setPositiveButton("OK", null).show()
+    }
+
+    private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 
     private fun showSettings() {
         val panel = LinearLayout(this).apply {
