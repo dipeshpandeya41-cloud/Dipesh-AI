@@ -184,6 +184,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setOnClickListener { exportSpreadsheetFile() }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         actions.addView(Button(this).apply {
+            text = "⌨ Save .sh"
+            setOnClickListener { exportTermuxScript() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        actions.addView(Button(this).apply {
             text = "🎙 बोलें"
             setOnClickListener { startVoiceInput() }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -271,6 +275,28 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
             }
             .setNegativeButton("बंद", null)
+            .show()
+    }
+
+    private fun exportTermuxScript() {
+        val script = input.text.toString()
+        if (script.isBlank()) {
+            toast("पहले अपना shell script लिखें या text file खोलें।")
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Save Termux script?")
+            .setMessage("यह केवल .sh फ़ाइल सेव करेगा। कोई command अपने आप execute नहीं होगी। सेव करने से पहले script जाँचें और Termux में स्वयं चलाएँ।")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save script") { _, _ ->
+                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "text/x-shellscript"
+                    putExtra(Intent.EXTRA_TITLE, "dipesh-ai-script.sh")
+                }
+                try { startActivityForResult(intent, 48) }
+                catch (_: Exception) { toast("फ़ाइल सेव करने का विकल्प उपलब्ध नहीं है।") }
+            }
             .show()
     }
 
@@ -395,6 +421,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         if (bitmap != null) analyzeImage(bitmap, "इस फोटो में क्या दिखाई दे रहा है? विस्तार से बताइए।")
                         else toast("फोटो पढ़ी नहीं जा सकी।")
                     } catch (_: Exception) { toast("फोटो खोलने में समस्या हुई।") }
+                }
+            }
+            48 -> {
+                val uri = data.data
+                if (uri != null) {
+                    try {
+                        contentResolver.openOutputStream(uri)?.use { output ->
+                            output.write(input.text.toString().toByteArray(Charsets.UTF_8))
+                        } ?: throw IllegalStateException("Could not open destination")
+                        toast("Shell script सेव हो गई। Termux में खोलने से पहले इसे जाँचें।")
+                    } catch (_: Exception) {
+                        toast("Shell script सेव नहीं हो सकी।")
+                    }
                 }
             }
             47 -> {
