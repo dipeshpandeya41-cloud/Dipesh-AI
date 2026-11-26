@@ -161,3 +161,12 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Manage a local offline task list: add tasks, toggle completion, and clear completed tasks; task data is stored in app preferences (up to 100 tasks).
 - Calculate age from a validated birth date and compare two dates in days.
 - Accept ISO `YYYY-MM-DD` and `DD/MM/YYYY` input formats; reject invalid/future birth dates.
+
+
+### 10. Offline task reminders
+- Extend the local task list with optional due times and a reminder action.
+- Schedule reminders with Android's inexact `AlarmManager.setAndAllowWhileIdle` API; avoid exact-alarm special access.
+- Deliver notifications through a private broadcast receiver and a dedicated notification channel.
+- Request Android 13+ notification permission before scheduling; allow users to retry after granting it.
+- Completing a reminder task cancels its pending alarm.
+- Reminders remain on-device and use no paid API or backend. Inexact delivery may be deferred by Android, and this version does not restore alarms after device reboot.
