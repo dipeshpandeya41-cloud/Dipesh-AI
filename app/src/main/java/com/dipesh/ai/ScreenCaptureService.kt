@@ -100,7 +100,9 @@ class ScreenCaptureService : Service() {
                     cropped.compress(Bitmap.CompressFormat.JPEG, 75, out)
                     out.toByteArray()
                 }
-                sendBroadcast(Intent(ACTION_RESULT).setPackage(packageName).putExtra("image", bytes))
+                val file = java.io.File(cacheDir, "screen_capture.jpg")
+                file.writeBytes(bytes)
+                sendBroadcast(Intent(ACTION_RESULT).setPackage(packageName).putExtra("image_path", file.absolutePath))
                 full.recycle()
                 cropped.recycle()
             }
