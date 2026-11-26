@@ -23,6 +23,9 @@ import android.view.Gravity
 import android.view.View
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.animation.Animator
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -49,6 +52,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var connectionStatus: TextView
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private val dashboardAnimators = mutableListOf<Animator>()
+    private var voiceLogView: TextView? = null
     private var receiverRegistered = false
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -307,7 +312,38 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             addView(core, LinearLayout.LayoutParams(112.dp(), 112.dp()))
         }
         panel.addView(coreHolder, matchWidth())
-        panel.addView(commandCard("VOICE LOG  •  READY", "Voice input • Speech output\nTap the microphone below to speak", 0xFF10283E.toInt()), matchWidth())
+        listOf(View.SCALE_X, View.SCALE_Y).forEach { property ->
+            val pulse = ObjectAnimator.ofFloat(core, property, 0.94f, 1.06f).apply {
+                duration = 1800
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+            }
+            dashboardAnimators.add(pulse)
+            pulse.start()
+        }
+        val voicePanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(9, 8, 9, 8)
+            background = GradientDrawable().apply {
+                setColor(0xFF10283E.toInt())
+                cornerRadius = 12f
+                setStroke(1, 0xFF246C8B.toInt())
+            }
+            addView(TextView(this@MainActivity).apply {
+                text = "VOICE LOG  •  READY"
+                textSize = 10f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(0xFF6FE5FF.toInt())
+            })
+            voiceLogView = TextView(this@MainActivity).apply {
+                text = "▁ ▂ ▄ ▆ ▄ ▂ ▁   Voice input • Speech output"
+                textSize = 12f
+                setTextColor(0xFFD7EAF5.toInt())
+                setPadding(0, 5, 0, 0)
+            }
+            addView(voiceLogView)
+        }
+        panel.addView(voicePanel, matchWidth())
         panel.addView(TextView(this).apply {
             text = "ASSISTANT OPTIONS"
             textSize = 12f
@@ -909,8 +945,13 @@ Return a single complete, self-contained index.html in ONE html code fence, with
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
             putExtra(RecognizerIntent.EXTRA_PROMPT, "बोलें / Speak")
         }
-        try { startActivityForResult(intent, 42) }
-        catch (_: Exception) { toast("इस डिवाइस पर Speech Recognition उपलब्ध नहीं है।") }
+        try {
+            voiceLogView?.text = "Listening requested • Speak in " + language
+            startActivityForResult(intent, 42)
+        } catch (_: Exception) {
+            voiceLogView?.text = "Speech recognition unavailable"
+            toast("इस डिवाइस पर Speech Recognition उपलब्ध नहीं है।")
+        }
     }
 
     private fun openCamera() {
@@ -939,7 +980,11 @@ Return a single complete, self-contained index.html in ONE html code fence, with
             }
             42 -> {
                 val spoken = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-                if (!spoken.isNullOrBlank()) { input.setText(spoken); input.setSelection(input.text.length) }
+                if (!spoken.isNullOrBlank()) {
+                    input.setText(spoken)
+                    input.setSelection(input.text.length)
+                    voiceLogView?.text = "Recognized: " + spoken.take(110)
+                } else voiceLogView?.text = "No speech recognized"
             }
             43 -> {
                 val bitmap = data.extras?.get("data") as? Bitmap
@@ -1245,6 +1290,8 @@ Return a single complete, self-contained index.html in ONE html code fence, with
     }
     override fun onDestroy() {
         if (receiverRegistered) try { unregisterReceiver(screenReceiver) } catch (_: Exception) {}
+        dashboardAnimators.forEach { it.cancel() }
+        dashboardAnimators.clear()
         tts?.stop()
         tts?.shutdown()
         super.onDestroy()
