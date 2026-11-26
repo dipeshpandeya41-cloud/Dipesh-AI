@@ -123,3 +123,7 @@ The Tasks screen supports local sorting by newest first, due date (soonest first
 
 ## Offline task backup
 From the Tasks screen, choose **Export all tasks to CSV** and save through Android's document picker. The export includes task title, completion status, priority, due time, reminder ID, daily-repeat setting, and creation time. CSV values are escaped for spreadsheet compatibility. The export is generated locally; no account, network, or paid API is required.
+
+
+### Restore an offline task backup
+In Tasks, choose **Import task CSV backup** and select a CSV previously exported by DIPESH AI. The importer validates the expected header, handles quoted commas and escaped quotes, skips duplicate tasks, respects the 100-task limit, and restores future reminders with fresh local reminder IDs. Imported completed or expired reminders are not rescheduled. The operation is local-only.
