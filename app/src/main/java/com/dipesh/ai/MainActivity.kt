@@ -180,6 +180,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setOnClickListener { copyForSpreadsheet() }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         actions.addView(Button(this).apply {
+            text = "⬇ CSV Export"
+            setOnClickListener { exportSpreadsheetFile() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        actions.addView(Button(this).apply {
             text = "🎙 बोलें"
             setOnClickListener { startVoiceInput() }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
@@ -268,6 +272,24 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             .setNegativeButton("बंद", null)
             .show()
+    }
+
+    private fun exportSpreadsheetFile() {
+        val content = input.text.toString()
+        if (content.isBlank()) {
+            toast("पहले CSV या tab-separated डेटा लिखें या फ़ाइल खोलें।")
+            return
+        }
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/csv"
+            putExtra(Intent.EXTRA_TITLE, "dipesh-ai-export.csv")
+        }
+        try {
+            startActivityForResult(intent, 47)
+        } catch (_: Exception) {
+            toast("फ़ाइल सेव करने का विकल्प उपलब्ध नहीं है।")
+        }
     }
 
     private fun copyForSpreadsheet() {
@@ -373,6 +395,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                         if (bitmap != null) analyzeImage(bitmap, "इस फोटो में क्या दिखाई दे रहा है? विस्तार से बताइए।")
                         else toast("फोटो पढ़ी नहीं जा सकी।")
                     } catch (_: Exception) { toast("फोटो खोलने में समस्या हुई।") }
+                }
+            }
+            47 -> {
+                val uri = data.data
+                if (uri != null) {
+                    try {
+                        contentResolver.openOutputStream(uri)?.use { output ->
+                            output.write(input.text.toString().toByteArray(Charsets.UTF_8))
+                        } ?: throw IllegalStateException("Could not open destination")
+                        toast("CSV फ़ाइल सेव हो गई। इसे Excel या Google Sheets में खोलें।")
+                    } catch (_: Exception) {
+                        toast("CSV फ़ाइल सेव नहीं हो सकी।")
+                    }
                 }
             }
             46 -> {
