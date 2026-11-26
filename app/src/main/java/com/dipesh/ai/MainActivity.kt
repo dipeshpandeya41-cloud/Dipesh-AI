@@ -40,7 +40,11 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.concurrent.thread
@@ -1848,6 +1852,7 @@ Return a multi-file website project. For EACH file, write a heading exactly like
 
     private fun offlineReply(message: String): String {
         val q = message.trim().lowercase(Locale.ROOT)
+        offlineDateTools(q)?.let { return it }
         offlineQuickConversion(q)?.let { return it }
         val percent = Regex("^\\s*(?:what is )?([0-9]+(?:\\.[0-9]+)?)\\s*%\\s*(?:of|का)\\s*([0-9]+(?:\\.[0-9]+)?)\\s*\\??$").matchEntire(q)
         if (percent != null) {
@@ -1870,7 +1875,7 @@ Return a multi-file website project. For EACH file, write a heading exactly like
             q.contains("नाम") || q.contains("who are you") ->
                 "मैं Dipesh AI हूँ, आपका Android assistant। Offline mode में जवाब local rules से बनते हैं; यह downloaded large language model नहीं है।"
             q.contains("मदद") || q.contains("help") || q == "?" ->
-                "Offline features: greetings, app guidance, arithmetic, percentage calculations (15% of 200), and unit conversions (5 km to mi). For general AI chat, image understanding, and project generation, turn off Offline-first mode and configure your Gemini key."
+                "Offline features: greetings, app guidance, arithmetic, percentage calculations (15% of 200), unit conversions (5 km to mi), local date/time (today), age (age 1990-01-01), and date differences (days between 2026-01-01 and 2026-02-01). For general AI chat, image understanding, and project generation, turn off Offline-first mode and configure your Gemini key."
             q.contains("website") ->
                 "Open Website Builder to create a starter website. Online generation requires your Gemini API key and internet access."
             q.contains("agent") ->
@@ -1878,8 +1883,61 @@ Return a multi-file website project. For EACH file, write a heading exactly like
             q.contains("voice") || q.contains("भाषा") ->
                 "Open AI/API Settings, choose an installed speech language, and select an available voice. Voice data availability depends on your Android text-to-speech engine."
             else ->
-                "Offline mode is active. I can answer built-in help topics, calculate arithmetic and percentages, and convert common units. For open-ended questions, disable Offline-first mode in AI/API Settings and use your Gemini key. No local large language model is installed."
+                "Offline mode is active. I can answer built-in help topics, calculate arithmetic and percentages, convert common units, check local date/time, calculate age, and compare dates. For open-ended questions, disable Offline-first mode in AI/API Settings and use your Gemini key. No local large language model is installed."
         }
+    }
+
+    private fun offlineDateTools(query: String): String? {
+        if (query in listOf("date", "today", "today's date", "what is the date", "what's the date", "time", "current time", "what time is it", "date and time")) {
+            val now = Date()
+            return "Your device's local date and time: " +
+                SimpleDateFormat("EEEE, dd MMMM yyyy • hh:mm:ss a", Locale.getDefault()).format(now)
+        }
+        val ageMatch = Regex("^(?:age|calculate age|how old am i if born|how old if born)\\s*[: ]*([0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}/[0-9]{2}/[0-9]{4})$").matchEntire(query)
+        if (ageMatch != null) {
+            val birth = parseOfflineDate(ageMatch.groupValues[1])
+                ?: return "Use a valid birth date in YYYY-MM-DD or DD/MM/YYYY format."
+            val today = Calendar.getInstance()
+            val dob = Calendar.getInstance().apply { time = birth }
+            if (dob.after(today)) return "Birth date cannot be in the future."
+            var years = today.get(Calendar.YEAR) - dob.get(Calendar.YEAR)
+            val birthdayThisYear = Calendar.getInstance().apply {
+                set(Calendar.YEAR, today.get(Calendar.YEAR))
+                set(Calendar.MONTH, dob.get(Calendar.MONTH))
+                set(Calendar.DAY_OF_MONTH, dob.get(Calendar.DAY_OF_MONTH))
+            }
+            if (today.before(birthdayThisYear)) years--
+            val lastBirthday = Calendar.getInstance().apply {
+                set(Calendar.YEAR, dob.get(Calendar.YEAR) + years)
+                set(Calendar.MONTH, dob.get(Calendar.MONTH))
+                set(Calendar.DAY_OF_MONTH, dob.get(Calendar.DAY_OF_MONTH))
+            }
+            val elapsedDays = ((today.timeInMillis - lastBirthday.timeInMillis) / 86400000L).coerceAtLeast(0)
+            return "Age: $years years (approximately $elapsedDays days since your last birthday)."
+        }
+        val between = Regex("^(?:days between|date difference|difference between)\\s+([0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}/[0-9]{2}/[0-9]{4})\\s+(?:and|to)\\s+([0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{2}/[0-9]{2}/[0-9]{4})$").matchEntire(query)
+        if (between != null) {
+            val first = parseOfflineDate(between.groupValues[1])
+                ?: return "Use valid dates in YYYY-MM-DD or DD/MM/YYYY format."
+            val second = parseOfflineDate(between.groupValues[2])
+                ?: return "Use valid dates in YYYY-MM-DD or DD/MM/YYYY format."
+            val utc = TimeZone.getTimeZone("UTC")
+            val a = Calendar.getInstance(utc).apply { time = first }
+            val b = Calendar.getInstance(utc).apply { time = second }
+            val dayA = Calendar.getInstance(utc).apply { set(a.get(Calendar.YEAR), a.get(Calendar.MONTH), a.get(Calendar.DAY_OF_MONTH), 0, 0, 0); set(Calendar.MILLISECOND, 0) }
+            val dayB = Calendar.getInstance(utc).apply { set(b.get(Calendar.YEAR), b.get(Calendar.MONTH), b.get(Calendar.DAY_OF_MONTH), 0, 0, 0); set(Calendar.MILLISECOND, 0) }
+            val days = kotlin.math.abs(dayB.timeInMillis - dayA.timeInMillis) / 86400000L
+            return "Date difference: $days days."
+        }
+        return null
+    }
+
+    private fun parseOfflineDate(value: String): Date? {
+        val pattern = if (value.contains("-")) "yyyy-MM-dd" else "dd/MM/yyyy"
+        return try {
+            SimpleDateFormat(pattern, Locale.US).apply { isLenient = false }.parse(value)
+                ?.takeIf { SimpleDateFormat(pattern, Locale.US).format(it) == value }
+        } catch (_: Exception) { null }
     }
 
     private fun offlineQuickConversion(query: String): String? {
