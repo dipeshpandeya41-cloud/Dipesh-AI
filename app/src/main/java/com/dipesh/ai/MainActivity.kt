@@ -158,6 +158,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(phoneTools, matchWidth())
 
+        root.addView(Button(this).apply {
+            text = "📱 Open Installed App"
+            setOnClickListener { openInstalledAppChooser() }
+        }, matchWidth())
+
         val scroll = ScrollView(this)
         chat = TextView(this).apply {
             textSize = 16f
@@ -340,6 +345,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("DIPESH AI spreadsheet data", content))
         toast("डेटा कॉपी हो गया। Excel/Sheets में सेल चुनकर Paste करें।")
+    }
+
+    private fun openInstalledAppChooser() {
+        // Android's system resolver presents launcher activities; the user chooses
+        // which installed app to open. DIPESH AI does not enumerate or control apps.
+        val launchIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        try {
+            startActivity(Intent.createChooser(launchIntent, "Choose an app to open"))
+        } catch (_: Exception) {
+            toast("No app launcher is available on this device.")
+        }
     }
 
     private fun openTermux() {
