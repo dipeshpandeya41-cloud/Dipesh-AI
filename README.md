@@ -73,3 +73,5 @@ Gemini online features require your own API key. Keep it private: do not paste i
 - Free API Hub expanded with Wikipedia article search through the Wikimedia REST API, Open Library book/author metadata search, and Free Dictionary API English definitions/phonetics/examples. These are public no-key endpoints; usage policies and rate limits apply. Successful dictionary lookups are cached locally (up to 30 words) and can be reopened offline.
 
 - Website ZIP export: generated website projects can be exported through Android's document picker as a ZIP containing `index.html`, a README, and an assets folder placeholder. No hosting service or paid dependency is required.
+
+- Multi-file website generation: website output uses separate `index.html`, `styles.css`, and `script.js` files when appropriate. ZIP export preserves safe relative paths and includes a README.
