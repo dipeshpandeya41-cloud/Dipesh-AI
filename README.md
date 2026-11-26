@@ -20,6 +20,13 @@ DIPESH AI is being developed as a polished Android assistant for Hindi and mixed
 - GitHub Actions debug-APK build workflow
 - AI Agent Builder: collect an agent brief and generate a starter architecture, file tree, tool contracts, code, setup steps, and tests with Gemini; review, copy, or save the result.
 - Website Builder: generate a responsive single-file HTML/CSS/JavaScript website with Gemini; review, copy, or save it as index.html.
+- Images hub for camera, gallery, and user-approved screenshot analysis
+- On-device Library for saved notes and imported text files
+- Customize menu with persistent dark/light appearance preference
+- Projects hub for reopening up to 20 saved AI agent and website outputs
+- Scheduled alarm handoff to Android Clock with user review and confirmation
+- Built-in Plugins directory for existing app integrations and shortcuts
+- Remote section documenting secure pairing requirements; remote control is deliberately not enabled
 
 > These items are present in source code; they are not a claim that every feature has passed device testing.
 
