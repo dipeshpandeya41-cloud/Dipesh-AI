@@ -10,24 +10,45 @@ internal object TaskCsvParser {
         var fields = mutableListOf<String>()
         val cell = StringBuilder()
         var quoted = false
+        var afterClosingQuote = false
         var index = 0
 
         while (index < contents.length) {
             val ch = contents[index]
             when {
-                ch == '"' -> {
-                    if (quoted && index + 1 < contents.length && contents[index + 1] == '"') {
+                quoted && ch == '"' -> {
+                    if (index + 1 < contents.length && contents[index + 1] == '"') {
                         cell.append('"')
                         index++
                     } else {
-                        quoted = !quoted
+                        quoted = false
+                        afterClosingQuote = true
                     }
                 }
-                ch == ',' && !quoted -> {
+                quoted -> cell.append(ch)
+                afterClosingQuote && ch == ',' -> {
+                    fields.add(cell.toString())
+                    cell.setLength(0)
+                    afterClosingQuote = false
+                }
+                afterClosingQuote && (ch == '\n' || ch == '\r') -> {
+                    fields.add(cell.toString())
+                    cell.setLength(0)
+                    if (fields.any { it.isNotBlank() }) records.add(fields)
+                    fields = mutableListOf()
+                    afterClosingQuote = false
+                    if (ch == '\r' && index + 1 < contents.length && contents[index + 1] == '\n') index++
+                }
+                afterClosingQuote -> throw IllegalArgumentException("Unexpected character after closing quote")
+                ch == '"' -> {
+                    if (cell.isNotEmpty()) throw IllegalArgumentException("Quote inside an unquoted CSV field")
+                    quoted = true
+                }
+                ch == ',' -> {
                     fields.add(cell.toString())
                     cell.setLength(0)
                 }
-                (ch == '\n' || ch == '\r') && !quoted -> {
+                ch == '\n' || ch == '\r' -> {
                     fields.add(cell.toString())
                     cell.setLength(0)
                     if (fields.any { it.isNotBlank() }) records.add(fields)
