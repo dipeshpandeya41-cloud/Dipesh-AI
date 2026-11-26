@@ -161,3 +161,12 @@ The latest verified main build is GitHub Actions run #160 (https://github.com/di
 ### AI Agent project ZIP export
 
 The AI Agent Builder can export a generated multi-file starter as a ZIP archive, preserving safe relative paths such as src/main.py and requirements.txt. It also offers the complete Markdown guide as a separate export option. The ZIP parser rejects absolute paths, traversal segments, invalid path characters, duplicate paths, oversized files, and exports more than 40 files. Generation still uses the optional Gemini API key configured by the user; there is no paid API dependency, and the app does not execute generated code.
+
+
+### Structured AI Agent starter projects
+
+The Agent Builder now requests a parseable multi-file project rather than code snippets embedded only in prose. Generated files use explicit `FILE: relative/path` labels followed by complete fenced code blocks so the ZIP exporter can preserve the project structure. Starters are asked to include a README, application entry point, configuration example with placeholders, dependency manifest, tests, and a `.gitignore` where appropriate. The design prompt also requires bounded agent steps, declared tool interfaces, least-privilege permissions, and human approval for consequential actions. Generated code remains review-only: DIPESH AI does not execute it. Project generation uses the user's optional Gemini key and may be subject to the provider's free-tier quotas.
+
+### Video Studio starter projects
+
+Video Studio offers three project-generation targets: Remotion, FFmpeg, and MoviePy. It can create reviewable multi-file starter projects and export them as ZIP files. The Android app does not bundle those external toolchains or render videos itself; users must install the relevant tool on a compatible environment and inspect generated scripts before running them. No paid API or new dependency is required by this feature. Remotion licensing varies by usage, so check its current terms before commercial use.
