@@ -1200,7 +1200,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     "USGS reports no significant earthquakes in this feed's current monthly window."
                 } else {
                     buildString {
-                        append("Recent significant earthquakes (USGS)\\n\\n")
+                        append("Recent significant earthquakes (USGS)\n\n")
                         for (index in 0 until minOf(features.length(), 10)) {
                             val item = features.optJSONObject(index) ?: continue
                             val properties = item.optJSONObject("properties") ?: continue
@@ -1212,14 +1212,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             if (timestamp > 0L) {
                                 val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.US)
                                 formatter.timeZone = TimeZone.getTimeZone("UTC")
-                                append("\\n").append(formatter.format(Date(timestamp)))
+                                append("\n").append(formatter.format(Date(timestamp)))
                             }
                             val url = properties.optString("url")
-                            if (url.startsWith("https://")) append("\\n").append(url)
-                            append("\\n\\n")
+                            if (url.startsWith("https://")) append("\n").append(url)
+                            append("\n\n")
                         }
                         append("Source: USGS Earthquake Hazards Program • significant_month GeoJSON feed")
-                        append("\\nReports may be revised; this is not an emergency alert service.")
+                        append("\nReports may be revised; this is not an emergency alert service.")
                     }
                 }
             } catch (e: Exception) {
