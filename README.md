@@ -15,7 +15,7 @@ DIPESH AI is being developed as a polished Android assistant for Hindi and mixed
 - Permission-based one-time screen capture for AI understanding
 - Local conversation history and basic offline replies
 - Android Settings and Dialer shortcuts
-- User-driven installed-app chooser using Android's system resolver (the user selects the app to open)
+- Installed-app picker listing launchable apps; the user explicitly selects which app to open
 - User-triggered Accessibility shortcuts (Back, Home, Notifications, Quick Settings)
 - GitHub Actions debug-APK build workflow
 
