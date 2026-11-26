@@ -1748,16 +1748,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun showApiDirectoryInfo() {
         AlertDialog.Builder(this).setTitle("Free API directory")
             .setMessage(
-                "ACTIVE NO-KEY CONNECTORS\n" +
-                "• Open-Meteo: geocoding and weather forecast; free service is for non-commercial use and has daily limits. Attribution required (CC BY 4.0).\n" +
-                "• Frankfurter: reference exchange rates; no API key; rates are published by central banks and are not live trading quotes.\n                "• Open-Meteo Air Quality: current AQI and pollutant estimates; no API key; attribution and non-commercial terms apply.\n\n" +
-                "" +
+                "ACTIVE NO-KEY CONNECTORS\\n" +
+                "• Open-Meteo: geocoding and weather forecast; non-commercial use and daily limits apply. Attribution required (CC BY 4.0).\\n" +
+                "• Open-Meteo Air Quality: current AQI and pollutant estimates; no API key; attribution and non-commercial terms apply.\\n" +
+                "• Frankfurter: reference exchange rates; no API key; central-bank reference data, not live trading quotes.\\n" +
                 "• Wikipedia/Wikimedia REST: article search; no key; respect Wikimedia access policies.\\n" +
                 "• Open Library: book metadata search; no key; 1 request/second default limit; identify app and cache results.\\n" +
-                "• Free Dictionary API: English definitions, phonetics and examples; no key; public endpoint and provider usage policy apply.\\n\\n" +
-                "OTHER BUILT-IN / DEVICE SERVICES\n" +
-                "• Gemini Developer API: limited free tier, requires your own key.\n" +
-                "• Android speech recognition and Text-to-Speech: depends on installed Android speech services.\n\n" +
+                "• Free Dictionary API: English definitions, phonetics and examples; no key; provider usage policy applies.\\n" +
+                "• USGS: significant earthquake GeoJSON feed; no key; informational only, not an emergency alert service.\\n\\n" +
+                "OTHER BUILT-IN / DEVICE SERVICES\\n" +
+                "• Gemini Developer API: limited free tier, requires your own key.\\n" +
+                "• Android speech recognition and Text-to-Speech: depends on installed Android speech services.\\n\\n" +
                 "No unlimited quota is promised. Check each provider's current terms before commercial use."
             )
             .setPositiveButton("Open Open-Meteo terms") { _, _ ->
