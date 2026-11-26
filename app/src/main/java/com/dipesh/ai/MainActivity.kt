@@ -1161,6 +1161,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "Offline dictionary cache • Saved words",
             "Free text translation • MyMemory • No key",
             "Recent earthquakes • USGS • No key",
+            "Air quality • Open-Meteo • No key",
             "API directory and terms",
             "Gemini AI • User's own free-tier key"
         )
@@ -1177,8 +1178,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     7 -> showOfflineDictionaryCache()
                     8 -> promptFreeTranslation()
                     9 -> promptRecentEarthquakes()
-                    10 -> showApiDirectoryInfo()
-                    11 -> showSettings()
+                    10 -> promptAirQuality()
+                    11 -> showApiDirectoryInfo()
+                    12 -> showSettings()
                 }
             }
             .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
@@ -1341,6 +1343,72 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
             } catch (e: Exception) {
                 "Weather request failed: " + (e.message ?: "network error")
+            }
+            runOnUiThread { showAnswer(result) }
+        }
+    }
+
+    private fun promptAirQuality() {
+        val city = EditText(this).apply {
+            hint = "Enter city (e.g. Kathmandu, Dhangaḍhi)"
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this).setTitle("Air quality • Open-Meteo")
+            .setMessage("Uses public geocoding and air-quality data. No API key or account required. Values may be model-based and are not a substitute for official local monitoring.")
+            .setView(city)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Check air quality") { _, _ ->
+                val place = city.text.toString().trim()
+                if (place.isBlank()) { toast("Enter a city name first."); return@setPositiveButton }
+                loadAirQuality(place)
+            }.show()
+    }
+
+    private fun loadAirQuality(city: String) {
+        showAnswer("Checking air quality for $city…")
+        thread {
+            val result = try {
+                val geo = apiGet("https://geocoding-api.open-meteo.com/v1/search?name=" +
+                    Uri.encode(city) + "&count=1&language=en&format=json")
+                val locations = geo.optJSONArray("results") ?: JSONArray()
+                if (locations.length() == 0) throw Exception("City not found. Try a nearby larger city.")
+                val place = locations.getJSONObject(0)
+                val lat = place.getDouble("latitude")
+                val lon = place.getDouble("longitude")
+                val data = apiGet("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=$lat&longitude=$lon&current=us_aqi,european_aqi,pm2_5,pm10,ozone,nitrogen_dioxide")
+                val current = data.optJSONObject("current") ?: throw Exception("Current air-quality data is unavailable.")
+                val aqi = current.optDouble("us_aqi", Double.NaN)
+                val category = when {
+                    aqi.isNaN() -> "Unavailable"
+                    aqi <= 50 -> "Good"
+                    aqi <= 100 -> "Moderate"
+                    aqi <= 150 -> "Unhealthy for sensitive groups"
+                    aqi <= 200 -> "Unhealthy"
+                    aqi <= 300 -> "Very unhealthy"
+                    else -> "Hazardous"
+                }
+                val name = place.optString("name", city)
+                val region = place.optString("admin1", "")
+                fun value(key: String, unit: String): String {
+                    val number = current.optDouble(key, Double.NaN)
+                    return if (number.isNaN()) "Not available" else String.format(Locale.US, "%.1f", number) + unit
+                }
+                buildString {
+                    append("Air quality for $name")
+                    if (region.isNotBlank()) append(", $region")
+                    append("\nUS AQI: ").append(if (aqi.isNaN()) "Not available" else String.format(Locale.US, "%.0f", aqi))
+                    append(" • ").append(category)
+                    append("\nEuropean AQI: ").append(value("european_aqi", ""))
+                    append("\nPM2.5: ").append(value("pm2_5", " μg/m³"))
+                    append("\nPM10: ").append(value("pm10", " μg/m³"))
+                    append("\nOzone: ").append(value("ozone", " μg/m³"))
+                    append("\nNitrogen dioxide: ").append(value("nitrogen_dioxide", " μg/m³"))
+                    append("\nUpdated: ").append(current.optString("time", "Not available"))
+                    append("\nSource: Open-Meteo Air Quality • CC BY 4.0")
+                    append("\nModelled data can differ from local sensor readings; follow official health advice.")
+                }
+            } catch (e: Exception) {
+                "Air-quality request failed: " + (e.message ?: "network error")
             }
             runOnUiThread { showAnswer(result) }
         }
@@ -1682,7 +1750,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             .setMessage(
                 "ACTIVE NO-KEY CONNECTORS\n" +
                 "• Open-Meteo: geocoding and weather forecast; free service is for non-commercial use and has daily limits. Attribution required (CC BY 4.0).\n" +
-                "• Frankfurter: reference exchange rates; no API key; rates are published by central banks and are not live trading quotes.\n\n" +
+                "• Frankfurter: reference exchange rates; no API key; rates are published by central banks and are not live trading quotes.\n                "• Open-Meteo Air Quality: current AQI and pollutant estimates; no API key; attribution and non-commercial terms apply.\n\n" +
+                "" +
                 "• Wikipedia/Wikimedia REST: article search; no key; respect Wikimedia access policies.\\n" +
                 "• Open Library: book metadata search; no key; 1 request/second default limit; identify app and cache results.\\n" +
                 "• Free Dictionary API: English definitions, phonetics and examples; no key; public endpoint and provider usage policy apply.\\n\\n" +
