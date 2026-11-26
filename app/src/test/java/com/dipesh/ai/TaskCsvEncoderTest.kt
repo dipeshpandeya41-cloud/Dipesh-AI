@@ -23,4 +23,20 @@ class TaskCsvEncoderTest {
     fun encodesEmptyValue() {
         assertEquals("\"\"", TaskCsvEncoder.encodeCell(""))
     }
+
+    @Test
+    fun roundTripsSpecialCharactersThroughCsvParser() {
+        val values = listOf("comma, value", "Say \"hello\"", "first line\nsecond line", "")
+        val csv = values.joinToString(",") { TaskCsvEncoder.encodeCell(it) }
+
+        assertEquals(listOf(values), TaskCsvParser.parseRecords(csv))
+    }
+
+    @Test
+    fun roundTripsQuotesCommasAndUnicodeTogether() {
+        val value = "नेपाल, \"नमस्ते\" 🌏"
+        val csv = TaskCsvEncoder.encodeCell(value)
+
+        assertEquals(listOf(listOf(value)), TaskCsvParser.parseRecords(csv))
+    }
 }
