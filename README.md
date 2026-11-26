@@ -7,7 +7,7 @@ DIPESH AI is being developed as a polished Android assistant for Hindi and mixed
 ## What is in the repository now
 - Kotlin Android app using Android Views, with role-labelled chat bubbles and persistent conversation rendering
 - Gemini chat and image-analysis request code; visible AI connection status (offline, saved key, connecting, success, failure); API credentials encrypted using Android Keystore and sent in the `x-goog-api-key` header
-- Configurable speech-recognition locale and cycling through voices installed on the device
+- Configurable speech-recognition locale, an installed TTS-language picker, and cycling through voices installed on the device
 - User-selected text/CSV file import into the message composer
 - Optional Termux app launcher
 - Hindi speech-recognition input and Text-to-Speech output
