@@ -91,3 +91,13 @@ The analytics panel is explicitly marked as not connected: this build does not f
 ## Command Center motion and voice feedback
 
 The central orb now has a subtle repeating scale pulse using Android property animators. Animators are cancelled in `onDestroy` to avoid continuing work after the activity closes. The voice panel updates when Android speech recognition is launched and when recognized text is returned. Its bar glyph is a static decorative motif, not a live audio waveform, and the app does not record continuous microphone amplitude for this display.
+
+## Free API Hub — implemented integrations
+
+The app's Plugins section includes a **Free API Hub** with three working no-key connectors:
+
+1. **Open-Meteo** — city geocoding followed by current weather (temperature, apparent temperature, humidity, wind, local observation time). Its free endpoint is limited to non-commercial use and published request limits; attribution under CC BY 4.0 is required. See [Open-Meteo terms](https://open-meteo.com/en/terms) and [API documentation](https://open-meteo.com/en/docs).
+2. **Frankfurter** — converts a user-entered amount using central-bank reference exchange rates. No API key is required; rates are not live trading or payment quotes. See [Frankfurter](https://frankfurter.dev/).
+3. **REST Countries** — read-only country metadata including capital, region, population, currencies, languages, and country code. See [REST Countries API](https://restcountries.com/).
+
+Requests are initiated by the user, use HTTPS GET, have connection/read timeouts, and do not require storing provider keys. Gemini remains a separate optional API with a user-supplied key and a limited free tier. The hub is a curated set of integrations, not a promise to include every API or provide unlimited/permanent free service. Provider terms, quotas, availability, and commercial-use restrictions can change; re-check them before distribution or commercial use.
