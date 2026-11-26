@@ -157,5 +157,7 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 
 ### 17. Offline date and time utilities
 - Read the device-local date and time without network access.
+- Search saved on-device Library notes by keyword, returning matching lines without network access.
+- Manage a local offline task list: add tasks, toggle completion, and clear completed tasks; task data is stored in app preferences (up to 100 tasks).
 - Calculate age from a validated birth date and compare two dates in days.
 - Accept ISO `YYYY-MM-DD` and `DD/MM/YYYY` input formats; reject invalid/future birth dates.
