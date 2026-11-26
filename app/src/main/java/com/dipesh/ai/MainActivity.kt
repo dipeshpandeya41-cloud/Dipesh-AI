@@ -586,6 +586,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 "ACTIVE" -> !task.optBoolean("done")
                 "COMPLETED" -> task.optBoolean("done")
                 "HIGH" -> !task.optBoolean("done") && task.optString("priority", "MEDIUM") == "HIGH"
+                "OVERDUE" -> !task.optBoolean("done") && task.optLong("due_at", 0L) in 1 until System.currentTimeMillis()
                 else -> true
             }
             matchesFilter && task.optString("title", "Task").contains(query, ignoreCase = true)
@@ -610,6 +611,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "ACTIVE" -> "Active tasks"
             "COMPLETED" -> "Completed tasks"
             "HIGH" -> "High priority"
+            "OVERDUE" -> "Overdue tasks"
             else -> "All tasks"
         }, "↕ Sort: " + when (sort) { "DUE" -> "Due date"; "PRIORITY" -> "Priority"; else -> "Newest first" })
         labels.add("⇩ Export all tasks to CSV")
@@ -680,8 +682,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     return@setItems
                 }
                 if (which == 1) {
-                    val filters = arrayOf("All tasks", "Active tasks", "Completed tasks", "High priority")
-                    val values = arrayOf("ALL", "ACTIVE", "COMPLETED", "HIGH")
+                    val filters = arrayOf("All tasks", "Active tasks", "Completed tasks", "High priority", "Overdue tasks")
+                    val values = arrayOf("ALL", "ACTIVE", "COMPLETED", "HIGH", "OVERDUE")
                     AlertDialog.Builder(this).setTitle("Filter tasks")
                         .setSingleChoiceItems(filters, values.indexOf(filter).coerceAtLeast(0)) { dialog, selected ->
                             dialog.dismiss()
