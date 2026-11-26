@@ -41,6 +41,8 @@ import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import kotlin.concurrent.thread
 
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
@@ -1179,16 +1181,31 @@ Return a single complete, self-contained index.html in ONE html code fence, with
                 toast("Generated project copied.")
             }
             .setNegativeButton("Close", null)
-            .setPositiveButton("Save file") { _, _ ->
-                saveProjectToLibrary(title, editor.text.toString(), fileName)
-                pendingDevelopmentExport = editor.text.toString()
-                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = if (fileName.endsWith(".html")) "text/html" else "text/markdown"
-                    putExtra(Intent.EXTRA_TITLE, fileName)
+            .setPositiveButton(if (fileName.endsWith(".html")) "Export website" else "Save file") { _, _ ->
+                val edited = editor.text.toString()
+                saveProjectToLibrary(title, edited, fileName)
+                pendingDevelopmentExport = edited
+                if (fileName.endsWith(".html")) {
+                    AlertDialog.Builder(this).setTitle("Website export")
+                        .setItems(arrayOf("Save single HTML file", "Export website ZIP package")) { _, choice ->
+                            val zip = choice == 1
+                            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = if (zip) "application/zip" else "text/html"
+                                putExtra(Intent.EXTRA_TITLE, if (zip) "dipesh-ai-website.zip" else "index.html")
+                            }
+                            try { startActivityForResult(intent, if (zip) 50 else 49) }
+                            catch (_: Exception) { toast("File picker is unavailable.") }
+                        }.setNegativeButton("Cancel", null).show()
+                } else {
+                    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "text/markdown"
+                        putExtra(Intent.EXTRA_TITLE, fileName)
+                    }
+                    try { startActivityForResult(intent, 49) }
+                    catch (_: Exception) { toast("File picker is unavailable.") }
                 }
-                try { startActivityForResult(intent, 49) }
-                catch (_: Exception) { toast("File picker is unavailable.") }
             }
             .show()
     }
@@ -1447,6 +1464,28 @@ Return a single complete, self-contained index.html in ONE html code fence, with
                         toast("Shell script सेव हो गई। Termux में खोलने से पहले इसे जाँचें।")
                     } catch (_: Exception) {
                         toast("Shell script सेव नहीं हो सकी।")
+                    }
+                }
+            }
+            50 -> {
+                val uri = data.data
+                if (uri != null) {
+                    try {
+                        contentResolver.openOutputStream(uri)?.use { raw ->
+                            ZipOutputStream(raw).use { zip ->
+                                fun addFile(path: String, content: String) {
+                                    zip.putNextEntry(ZipEntry(path))
+                                    zip.write(content.toByteArray(Charsets.UTF_8))
+                                    zip.closeEntry()
+                                }
+                                addFile("index.html", pendingDevelopmentExport)
+                                addFile("README.md", "# DIPESH AI Website\\n\\nOpen index.html in a modern browser. Edit the HTML to customize your site.\\n")
+                                addFile("assets/README.txt", "Place images, fonts, and other static assets in this folder, then reference them from index.html.\\n")
+                            }
+                        } ?: throw IllegalStateException("Could not open destination")
+                        toast("Website ZIP package exported successfully.")
+                    } catch (_: Exception) {
+                        toast("Website ZIP export failed. Please try another save location.")
                     }
                 }
             }
