@@ -127,3 +127,22 @@ From the Tasks screen, choose **Export all tasks to CSV** and save through Andro
 
 ### Restore an offline task backup
 In Tasks, choose **Import task CSV backup** and select a CSV previously exported by DIPESH AI. The importer validates the expected header, handles quoted commas and escaped quotes, skips duplicate tasks, respects the 100-task limit, and restores future reminders with fresh local reminder IDs. Imported completed or expired reminders are not rescheduled. The operation is local-only.
+
+
+## Phone Access Hub and permission dashboard
+
+The Phone Access Hub provides one place to review and start supported phone actions:
+
+- **Microphone:** shows the current Android runtime-permission status and offers a user-triggered permission request.
+- **Accessibility:** shows whether DIPESH AI's accessibility service is enabled and links to Android Accessibility Settings. Actions remain limited to the explicitly supported Back, Home, Notifications, and Quick Settings shortcuts.
+- **Screen capture:** starts a one-time MediaProjection flow. Android displays its system approval prompt; approval is required for each capture session.
+- **Camera:** opens an external camera app only after the user taps the action.
+- **Photos:** opens Android's photo picker so the user selects an image.
+- **Installed apps:** opens a searchable chooser; the user selects which installed app to launch.
+- **App permissions:** opens Android's app-details settings page.
+
+This dashboard reports permission state; it does not grant permissions automatically. Android does not allow this app to silently access the camera, capture the screen continuously, or read private data belonging to other apps. Test each permission and action on the target phone because availability and prompts vary by Android version and device manufacturer.
+
+## Latest verified build
+
+The latest verified main build is GitHub Actions run #160 (https://github.com/dipeshpandeya41-cloud/Dipesh-AI/actions/runs/45751599499). Unit tests and debug APK build completed successfully, and the Dipesh-AI-debug-apk artifact was uploaded. Download it from the run's Artifacts section. This is a debug build, not a Play Store release-signed APK.
