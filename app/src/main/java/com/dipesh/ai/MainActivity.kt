@@ -393,7 +393,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         if (message.isEmpty()) return
         chat.append("\n\nआप: " + message + "\nDipesh AI: जवाब तैयार हो रहा है…"); saveHistory()
         input.text.clear()
-        val key = prefs.getString("key", "").orEmpty()
+        val key = secureKeys.read().orEmpty()
         if (key.isBlank()) { showAnswer(offlineReply(message)); return }
         thread {
             val answer = try { requestGemini(message, key, null) }
