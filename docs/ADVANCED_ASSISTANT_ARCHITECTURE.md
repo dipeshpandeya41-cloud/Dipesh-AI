@@ -101,3 +101,7 @@ The app's Plugins section includes a **Free API Hub** with three working no-key 
 3. **REST Countries** — read-only country metadata including capital, region, population, currencies, languages, and country code. See [REST Countries API](https://restcountries.com/).
 
 Requests are initiated by the user, use HTTPS GET, have connection/read timeouts, and do not require storing provider keys. Gemini remains a separate optional API with a user-supplied key and a limited free tier. The hub is a curated set of integrations, not a promise to include every API or provide unlimited/permanent free service. Provider terms, quotas, availability, and commercial-use restrictions can change; re-check them before distribution or commercial use.
+
+## Free public holiday calendar
+
+The Free API Hub includes Nager.Date v4 public holidays. Users enter a two-letter ISO country code (for example, `NP` or `IN`); the app requests the current calendar year's holiday list and displays dates, names, and available holiday types. The public REST endpoint does not require an API key or paid subscription; use it fairly and check current provider availability and terms. Official project and endpoint examples: [Nager.Date](https://github.com/nager/Nager.Date) and [REST API v4 examples](https://github.com/nager/Nager.Date/blob/main/doc/examples/rest-api.md).
