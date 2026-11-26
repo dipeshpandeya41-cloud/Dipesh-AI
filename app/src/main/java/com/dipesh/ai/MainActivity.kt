@@ -2,6 +2,10 @@ package com.dipesh.ai
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.app.AlertDialog
 import android.content.BroadcastReceiver
 import android.content.ClipData
@@ -71,6 +75,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             } else toast(intent?.getStringExtra("error") ?: "स्क्रीन कैप्चर असफल रहा।")
         }
     }
+    private val reminderPermissionRequest = 73
     private val prefs by lazy { getSharedPreferences("dipesh_ai", MODE_PRIVATE) }
     private val secureKeys by lazy { SecureKeyStore(this) }
 
@@ -576,7 +581,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
         val labels = (0 until tasks.length()).map { i ->
             val task = tasks.getJSONObject(i)
-            (if (task.optBoolean("done")) "✓ " else "○ ") + task.optString("title", "Task")
+            val due = task.optLong("due_at", 0L)
+            val dueLabel = if (due > 0L) " • " + SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(due)) else ""
+            (if (task.optBoolean("done")) "✓ " else "○ ") + task.optString("title", "Task") + dueLabel
         }.toTypedArray()
         val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${tasks.length()}")
             .setItems(labels) { _, which ->
@@ -585,15 +592,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
                 showTasksHub()
             }
-            .setNeutralButton("Clear completed") { _, _ ->
-                val remaining = JSONArray()
-                for (i in 0 until tasks.length()) {
-                    val task = tasks.getJSONObject(i)
-                    if (!task.optBoolean("done")) remaining.put(task)
-                }
-                prefs.edit().putString("local_tasks", remaining.toString()).apply()
-                showTasksHub()
-            }
+            .setNeutralButton("＋ Reminder", null)
             .setNegativeButton("Close", null)
             .setPositiveButton("＋ Add task", null)
         val dialog = builder.create()
@@ -602,8 +601,70 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 showAddLocalTask()
                 dialog.dismiss()
             }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                dialog.dismiss()
+                showScheduleLocalReminder()
+            }
         }
         dialog.show()
+    }
+
+    private fun showScheduleLocalReminder() {
+        val now = Calendar.getInstance()
+        DatePickerDialog(this, { _, year, month, day ->
+            val date = Calendar.getInstance().apply { set(year, month, day) }
+            TimePickerDialog(this, { _, hour, minute ->
+                date.set(Calendar.HOUR_OF_DAY, hour)
+                date.set(Calendar.MINUTE, minute)
+                date.set(Calendar.SECOND, 0)
+                date.set(Calendar.MILLISECOND, 0)
+                if (date.timeInMillis <= System.currentTimeMillis()) {
+                    toast("Choose a future time for the reminder.")
+                    return@TimePickerDialog
+                }
+                val titleInput = EditText(this).apply { hint = "Reminder title"; setSingleLine(true) }
+                AlertDialog.Builder(this).setTitle("Reminder details").setView(titleInput)
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Schedule") { _, _ ->
+                        val title = titleInput.text.toString().trim().ifBlank { "DIPESH AI reminder" }.take(180)
+                        scheduleLocalReminder(title, date.timeInMillis)
+                    }.show()
+            }, now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE), false).show()
+        }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).apply {
+            datePicker.minDate = System.currentTimeMillis() - 1000L
+        }.show()
+    }
+
+    private fun scheduleLocalReminder(title: String, triggerAt: Long) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            toast("Allow notifications, then add the reminder again.")
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), reminderPermissionRequest)
+            return
+        }
+        val reminderId = (System.currentTimeMillis() and 0x7fffffff).toInt()
+        val intent = Intent(this, ReminderReceiver::class.java).apply {
+            putExtra(ReminderReceiver.EXTRA_TITLE, title)
+            putExtra(ReminderReceiver.EXTRA_ID, reminderId)
+        }
+        val pending = PendingIntent.getBroadcast(this, reminderId, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+        val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+        tasks.put(JSONObject().put("title", title).put("done", false)
+            .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId))
+        prefs.edit().putString("local_tasks", tasks.toString()).apply()
+        toast("Reminder scheduled on this device.")
+        showTasksHub()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == reminderPermissionRequest) {
+            toast(if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                "Notifications allowed. Add the reminder again." else "Notifications are disabled; enable them in Android Settings.")
+        }
     }
 
     private fun showAddLocalTask() {
