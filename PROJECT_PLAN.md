@@ -185,3 +185,10 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 - Add a notification action to snooze a reminder for ten minutes and update the stored due time.
 - Re-arm daily reminders after each delivery and retain boot recovery.
 - Keep all task and reminder state on-device; use inexact alarms without exact-alarm special access.
+
+
+### 13. Reminder timing reliability
+- Keep daily reminders aligned to their original local clock time using calendar-day arithmetic.
+- Preserve the daily schedule anchor when a reminder is snoozed.
+- Refresh pending notification content when an active reminder title is edited.
+- Display a Daily marker in the task list.
