@@ -623,6 +623,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "Weather forecast • Open-Meteo • No key",
             "Currency rates • Frankfurter • No key",
             "Country information • REST Countries • No key",
+            "Public holidays • Nager.Date • No key",
             "API directory and terms",
             "Gemini AI • User's own free-tier key"
         )
@@ -632,8 +633,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     0 -> promptWeatherCity()
                     1 -> promptCurrencyConversion()
                     2 -> promptCountryInfo()
-                    3 -> showApiDirectoryInfo()
-                    4 -> showSettings()
+                    3 -> promptPublicHolidays()
+                    4 -> showApiDirectoryInfo()
+                    5 -> showSettings()
                 }
             }
             .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
@@ -809,6 +811,65 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             } catch (e: Exception) { "Country lookup failed: " + (e.message ?: "network error") }
             runOnUiThread { showAnswer(result) }
         }
+    }
+
+    private fun promptPublicHolidays() {
+        val code = EditText(this).apply {
+            hint = "2-letter country code (e.g. NP, IN, US)"
+            setSingleLine(true)
+            setText("NP")
+        }
+        AlertDialog.Builder(this).setTitle("Public holidays • Nager.Date")
+            .setMessage("No API key or paid subscription required. Uses the current calendar year.")
+            .setView(code).setNegativeButton("Cancel", null)
+            .setPositiveButton("Get holidays") { _, _ ->
+                val country = code.text.toString().trim().uppercase(Locale.US)
+                if (!country.matches(Regex("[A-Z]{2}"))) toast("Enter a valid 2-letter country code.")
+                else loadPublicHolidays(country, java.util.Calendar.getInstance().get(java.util.Calendar.YEAR))
+            }.show()
+    }
+
+    private fun loadPublicHolidays(country: String, year: Int) {
+        showAnswer("Loading $country public holidays for $year…")
+        thread {
+            val result = try {
+                val holidays = apiGetArray("https://nagerholidays.com/api/v4/Holidays/$country/$year")
+                if (holidays.length() == 0) throw Exception("No holidays returned for this country/year.")
+                buildString {
+                    append("Public holidays • ").append(country).append(" • ").append(year)
+                    val limit = minOf(holidays.length(), 45)
+                    for (i in 0 until limit) {
+                        val item = holidays.optJSONObject(i) ?: continue
+                        append("\\n\\n").append(item.optString("date"))
+                        append(" — ").append(item.optString("name", "Holiday"))
+                        val types = item.optJSONArray("holidayTypes")
+                        if (types != null && types.length() > 0) append(" (").append(types.join(", ")).append(")")
+                    }
+                    if (holidays.length() > limit) append("\\n\\nShowing ").append(limit).append(" of ").append(holidays.length())
+                    append("\\n\\nSource: Nager.Date")
+                }
+            } catch (e: Exception) { "Public holiday lookup failed: " + (e.message ?: "network error") }
+            runOnUiThread { showAnswer(result) }
+        }
+    }
+
+    private fun apiGetArray(address: String): JSONArray {
+        val url = URL(address)
+        require(url.protocol == "https") { "Only HTTPS APIs are allowed." }
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 10000
+            readTimeout = 12000
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "DIPESH-AI-Android/1.0")
+        }
+        try {
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) throw Exception("HTTP $code: " + body.take(180))
+            return JSONArray(body)
+        } finally { connection.disconnect() }
     }
 
     private fun showApiDirectoryInfo() {
