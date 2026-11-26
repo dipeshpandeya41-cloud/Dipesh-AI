@@ -111,6 +111,13 @@ These are observations from source code, not a claim that every feature has pass
 - Animate the central AI core with a subtle scale pulse and cancel animators when the activity is destroyed.
 - Add voice-log feedback when speech recognition is requested and when recognized text is returned. The waveform glyph is decorative; no live microphone amplitude is claimed or recorded.
 
+
+### 13. Free API Hub (implemented connectors)
+- Open-Meteo geocoding and current weather lookup; free endpoint is for non-commercial use within published rate limits and requires CC BY 4.0 attribution.
+- Frankfurter reference currency rates and amount conversion; no API key, and rates are reference data rather than live trading quotes.
+- REST Countries read-only country metadata lookup; no API key.
+- All calls are user-triggered HTTPS GET requests with timeouts and visible error messages. These are selected integrations, not every public API on the internet. Free tiers, availability, terms, and limits can change; no unlimited quota is promised.
+
 ## Build
 The repository includes a GitHub Actions workflow at .github/workflows/android.yml. Open the Actions tab, select **Build Dipesh AI APK**, and run it manually, or push a commit to main. Download the Dipesh-AI-debug-apk artifact only after the workflow succeeds.
 
