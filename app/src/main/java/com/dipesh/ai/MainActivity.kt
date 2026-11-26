@@ -1162,11 +1162,11 @@ Return a multi-file website project. For EACH file, write a heading exactly like
         val pattern = Regex("(?is)(?:^|\\n)\\s*(?:#{1,6}\\s*)?FILE\\s*:\\s*([^\\n]+)\\n\\s*```[a-zA-Z0-9_-]*\\s*\\n(.*?)\\n\\s*```")
         val files = mutableListOf<Pair<String, String>>()
         for (match in pattern.findAll(content)) {
-            val path = match.groupValues[1].trim().replace('\\\\', '/')
+            val path = match.groupValues[1].trim().replace('\\', '/')
             val parts = path.split('/')
             if (path.isBlank() || path.startsWith("/") || parts.any { it == ".." || it.isBlank() }) continue
             if (!path.matches(Regex("[A-Za-z0-9_./-]+"))) continue
-            if (files.none { it.first == path }) files.add(path to match.groupValues[2].trim() + "\\n")
+            if (files.none { it.first == path }) files.add(path to match.groupValues[2].trim() + "\n")
         }
         if (files.isEmpty()) {
             val html = Regex("(?is)```(?:html)?\\s*(.*?)```").find(content)?.groupValues?.get(1)?.trim()
@@ -1181,7 +1181,7 @@ Return a multi-file website project. For EACH file, write a heading exactly like
     }
 
     private fun showDevelopmentOutput(title: String, content: String, fileName: String) {
-        val displayContent = if (fileName.endsWith(".html")) {
+        val displayContent = if (fileName.endsWith(".html") && !Regex("(?im)^\\s*FILE\\s*:").containsMatchIn(content)) {
             Regex("(?is)```(?:html)?\\s*(.*?)```").find(content)?.groupValues?.get(1)?.trim() ?: content
         } else content
         val editor = EditText(this).apply {
