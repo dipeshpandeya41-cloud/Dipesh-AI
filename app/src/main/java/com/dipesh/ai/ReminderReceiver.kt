@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.app.AlarmManager
 import org.json.JSONArray
 import android.os.Build
@@ -44,7 +43,9 @@ class ReminderReceiver : BroadcastReceiver() {
         manager.notify(id, notification)
     }
 
-    private fun restorePendingReminders(context: Context) {
+
+    companion object {
+    fun restorePendingReminders(context: Context) {
         if (Build.VERSION.SDK_INT >= 33 &&
             context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
         val preferences = context.getSharedPreferences("dipesh_ai", Context.MODE_PRIVATE)
@@ -66,7 +67,6 @@ class ReminderReceiver : BroadcastReceiver() {
         }
     }
 
-    companion object {
         const val EXTRA_TITLE = "reminder_title"
         const val EXTRA_ID = "reminder_id"
     }
