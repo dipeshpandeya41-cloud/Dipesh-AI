@@ -16,7 +16,7 @@ class TaskCsvEncoderTest {
 
     @Test
     fun preservesCommasAndLineBreaksInsideQuotedField() {
-        assertEquals("\"first, line\\nsecond line\"", TaskCsvEncoder.encodeCell("first, line\nsecond line"))
+        assertEquals("\"first, line\nsecond line\"", TaskCsvEncoder.encodeCell("first, line\nsecond line"))
     }
 
     @Test
