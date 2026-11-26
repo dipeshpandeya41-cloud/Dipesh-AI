@@ -313,33 +313,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         panel.addView(overview, matchWidth())
 
-        val core = TextView(this).apply {
-            text = "✧\n◉\n✧"
-            textSize = 34f
+        val hudHolder = LinearLayout(this).apply {
             gravity = Gravity.CENTER
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(0xFF72E9FF.toInt())
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(0xFF153D62.toInt(), 0xFF071B34.toInt(), 0xFF31234E.toInt())
-            ).apply { shape = GradientDrawable.OVAL; setStroke(2, 0xFF48DFFF.toInt()) }
-            elevation = 10f
+            setPadding(0, 8, 0, 8)
+            addView(JarvisHudView(this@MainActivity), LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 172.dp()
+            ))
         }
-        val coreHolder = LinearLayout(this).apply {
-            gravity = Gravity.CENTER
-            setPadding(0, 10, 0, 10)
-            addView(core, LinearLayout.LayoutParams(112.dp(), 112.dp()))
-        }
-        panel.addView(coreHolder, matchWidth())
-        listOf(View.SCALE_X, View.SCALE_Y).forEach { property ->
-            val pulse = ObjectAnimator.ofFloat(core, property, 0.94f, 1.06f).apply {
-                duration = 1800
-                repeatMode = ValueAnimator.REVERSE
-                repeatCount = ValueAnimator.INFINITE
-            }
-            dashboardAnimators.add(pulse)
-            pulse.start()
-        }
+        panel.addView(hudHolder, matchWidth())
         val voicePanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(9, 8, 9, 8)
