@@ -67,3 +67,5 @@ Gemini online features require your own API key. Keep it private: do not paste i
 
 - Free API Hub with working no-key integrations: Open-Meteo weather/geocoding, Frankfurter reference currency rates, and REST Countries country metadata.
 - Public API requests use HTTPS, bounded connection/read timeouts, and GET-only requests; no extra provider key is stored for these three connectors.
+
+- Added Nager.Date public holiday lookup by two-letter country code for the current year; no API key or paid subscription required. Uses the provider's public REST API and fair-use expectations.
