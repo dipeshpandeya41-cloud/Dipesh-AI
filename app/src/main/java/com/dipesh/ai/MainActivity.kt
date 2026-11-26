@@ -306,8 +306,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }, matchWidth())
 
         val overview = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val aiStatus = if (secureKeys.read().isNullOrBlank()) "Offline" else "Key saved"
-        overview.addView(commandCard("SYSTEM STATUS", "AI: $aiStatus\nNetwork: On demand\nPrivacy: Local-first", 0xFF12344A.toInt()),
+        val aiStatus = if (secureKeys.read().isNullOrBlank()) "No API key" else "Key saved"
+        val modeStatus = if (prefs.getBoolean("offline_mode", false)) "Offline-first ON" else "Online AI available"
+        val micStatus = if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) "Microphone allowed" else "Microphone permission needed"
+        val systemDetails = "AI: $aiStatus\nMode: $modeStatus\n$micStatus"
+        overview.addView(commandCard("SYSTEM STATUS", systemDetails, 0xFF12344A.toInt()),
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         overview.addView(commandCard("PREDICTIVE ANALYTICS", "Live insights\nNot connected\nAsk Gemini to analyse data", 0xFF172B48.toInt()),
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
