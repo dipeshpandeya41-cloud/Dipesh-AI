@@ -51,10 +51,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
     private val prefs by lazy { getSharedPreferences("dipesh_ai", MODE_PRIVATE) }
+    private val secureKeys by lazy { SecureKeyStore(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         tts = TextToSpeech(this, this)
+        val legacyKey = prefs.getString("key", "").orEmpty()
+        if (legacyKey.isNotBlank() && secureKeys.read().isNullOrBlank()) secureKeys.save(legacyKey)
+        prefs.edit().remove("key").apply()
         buildScreen()
         chat.text = prefs.getString("history", chat.text.toString())
         val filter = IntentFilter(ScreenCaptureService.ACTION_RESULT)
@@ -106,6 +110,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             text = "🖼 फोटो चुनें"
             setOnClickListener { choosePhoto() }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        tools.addView(Button(this).apply {
+            text = "📁 फ़ाइल"
+            setOnClickListener { openTextFile() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(tools, matchWidth())
 
         val phoneTools = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -131,6 +139,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         phoneTools.addView(Button(this).apply {
             text = "🤖 Automation"
             setOnClickListener { showAutomationControls() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        phoneTools.addView(Button(this).apply {
+            text = "⌨ Termux"
+            setOnClickListener { openTermux() }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(phoneTools, matchWidth())
 
@@ -177,14 +189,24 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val key = EditText(this).apply {
             hint = "अपनी Gemini API key डालें"
             setSingleLine(true)
-            setText(prefs.getString("key", ""))
+            setText(secureKeys.read().orEmpty())
         }
         panel.addView(TextView(this).apply {
             text = "Free Tier के लिए Google AI Studio से अपनी API key बनाएँ। यह ऐप में आपके फोन पर सेव होगी। Free quota सीमित है; Google इसकी शर्तें बदल सकता है।"
             textSize = 13f
         })
+        val speechLanguage = EditText(this).apply {
+            hint = "Voice / speech language (e.g. hi-IN, en-US)"
+            setSingleLine(true)
+            setText(prefs.getString("speech_language", "hi-IN"))
+        }
         panel.addView(model)
         panel.addView(key)
+        panel.addView(speechLanguage)
+        panel.addView(Button(this).apply {
+            text = "अगली installed voice चुनें"
+            setOnClickListener { cycleVoice() }
+        })
         panel.addView(Button(this).apply {
             text = "Google AI Studio खोलें"
             setOnClickListener { launchSafely(Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey"))) }
@@ -195,7 +217,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             .setNegativeButton("रद्द", null)
             .setPositiveButton("सेव") { _, _ ->
                 prefs.edit().putString("model", model.text.toString().trim())
-                    .putString("key", key.text.toString().trim()).apply()
+                    .putString("speech_language", speechLanguage.text.toString().trim().ifBlank { "hi-IN" }).apply()
+                secureKeys.save(key.text.toString().trim())
                 Toast.makeText(this@MainActivity, "सेटिंग सेव हो गई।", Toast.LENGTH_SHORT).show()
             }.show()
     }
@@ -230,6 +253,35 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             .show()
     }
 
+    private fun openTermux() {
+        val launch = packageManager.getLaunchIntentForPackage("com.termux")
+        if (launch != null) launchSafely(launch)
+        else toast("Termux install नहीं है। पहले F-Droid से Termux install करें।")
+    }
+
+    private fun openTextFile() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "text/*"
+        }
+        try { startActivityForResult(intent, 46) }
+        catch (_: Exception) { toast("File picker उपलब्ध नहीं है।") }
+    }
+
+    private fun cycleVoice() {
+        val voices = tts?.voices?.sortedBy { it.name }.orEmpty()
+        if (voices.isEmpty()) {
+            toast("इस फोन में कोई TTS voice उपलब्ध नहीं है।")
+            return
+        }
+        val current = prefs.getString("tts_voice_name", null)
+        val nextIndex = ((voices.indexOfFirst { it.name == current } + 1) % voices.size)
+        val next = voices[nextIndex]
+        tts?.voice = next
+        prefs.edit().putString("tts_voice_name", next.name).apply()
+        toast("Voice: " + next.name + " • " + next.locale.displayName)
+    }
+
     private fun requestScreenCapture() {
         try {
             val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
@@ -244,8 +296,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "हिंदी में बोलें")
+            val language = prefs.getString("speech_language", "hi-IN").orEmpty()
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "बोलें / Speak")
         }
         try { startActivityForResult(intent, 42) }
         catch (_: Exception) { toast("इस डिवाइस पर Speech Recognition उपलब्ध नहीं है।") }
@@ -294,11 +347,27 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     } catch (_: Exception) { toast("फोटो खोलने में समस्या हुई।") }
                 }
             }
+            46 -> {
+                val uri = data.data
+                if (uri != null) {
+                    try { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                    catch (_: Exception) { }
+                    try {
+                        val contents = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                        if (contents.isNullOrBlank()) toast("फ़ाइल खाली है या पढ़ी नहीं जा सकती।")
+                        else {
+                            input.setText(contents.take(50000))
+                            input.setSelection(input.text.length)
+                            toast("फ़ाइल पढ़ी गई। भेजने से पहले सामग्री जाँच लें।")
+                        }
+                    } catch (_: Exception) { toast("सिर्फ़ readable text/CSV फ़ाइलें अभी समर्थित हैं।") }
+                }
+            }
         }
     }
 
     private fun analyzeImage(bitmap: Bitmap, prompt: String) {
-        val key = prefs.getString("key", "").orEmpty()
+        val key = secureKeys.read().orEmpty()
         if (key.isBlank()) { toast("पहले AI सेटिंग में अपनी Gemini API key डालें।"); return }
         chat.append("\n\nआप: [फोटो/स्क्रीन भेजी गई]\nDipesh AI: विश्लेषण कर रहा हूँ…"); saveHistory()
         thread {
@@ -328,7 +397,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val model = prefs.getString("model", "gemini-2.5-flash").orEmpty()
         require(model.matches(Regex("[A-Za-z0-9._-]+"))) { "Model name सही नहीं है" }
         val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" +
-            model + ":generateContent?key=" + java.net.URLEncoder.encode(key, "UTF-8")
+            model + ":generateContent"
         val parts = JSONArray().put(JSONObject().put("text", prompt))
         if (bitmap != null) {
             val scaled = scaleBitmap(bitmap)
@@ -348,6 +417,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             readTimeout = 45000
             doOutput = true
             setRequestProperty("Content-Type", "application/json")
+            setRequestProperty("x-goog-api-key", key)
         }
         try {
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
@@ -401,7 +471,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             ttsReady = true
-            tts?.language = Locale("hi", "IN")
+            val language = prefs.getString("speech_language", "hi-IN").orEmpty()
+            tts?.language = Locale.forLanguageTag(language)
+            val savedVoice = prefs.getString("tts_voice_name", null)
+            if (savedVoice != null) tts?.voices?.firstOrNull { it.name == savedVoice }?.let { tts?.voice = it }
         }
     }
     override fun onDestroy() {
