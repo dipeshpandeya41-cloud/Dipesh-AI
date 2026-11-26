@@ -845,14 +845,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             if (id != 0) usedIds.add(id)
         }
         var added = 0
-        var skipped = 0
+        var invalid = 0
+        var duplicates = 0
+        var overLimit = 0
         for (fields in records.drop(1)) {
-            if (tasks.length() >= 100) { skipped++; continue }
+            if (tasks.length() >= 100) { overLimit++; continue }
             val record = TaskCsvImportValidator.parse(fields)
-            if (record == null) { skipped++; continue }
+            if (record == null) { invalid++; continue }
             val title = record.title
             val createdAt = record.createdAt
-            if (!known.add(title + "|" + createdAt)) { skipped++; continue }
+            if (!known.add(title + "|" + createdAt)) { duplicates++; continue }
             var dueAt = record.dueAt
             val daily = record.repeatDaily
             val anchorAt = dueAt
@@ -885,8 +887,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         prefs.edit().putString("local_tasks", tasks.toString()).apply()
         if (added > 0) ReminderReceiver.restorePendingReminders(this)
-        toast("Imported $added tasks. Skipped $skipped duplicate, invalid, or over-limit rows.")
-        showTasksHub()
+        val skipped = invalid + duplicates + overLimit
+        val summary = "Import complete\\nAdded: $added\\nInvalid rows: $invalid\\nDuplicates: $duplicates\\nOver 100-task limit: $overLimit\\nSkipped total: $skipped"
+        AlertDialog.Builder(this)
+            .setTitle("Task backup import")
+            .setMessage(summary)
+            .setPositiveButton("OK") { _, _ -> showTasksHub() }
+            .setOnCancelListener { showTasksHub() }
+            .show()
     }
 
     private fun showScheduleLocalReminder() {
