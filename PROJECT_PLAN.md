@@ -26,7 +26,7 @@ These are observations from source code, not a claim that every feature has pass
 ## Product requirements
 
 ### 1. Polished home and chat experience
-- Clear app header, connection/status indicator, readable conversation bubbles, and simple message composer.
+- Clear app header, connection/status indicator, role-labelled conversation bubbles, persistent conversation rendering, and simple message composer.
 - Keep voice, camera, gallery, screen understanding, and settings easy to reach.
 - Show loading, empty, offline, and error states clearly.
 - Provide controls to clear local chat history and open AI settings.
