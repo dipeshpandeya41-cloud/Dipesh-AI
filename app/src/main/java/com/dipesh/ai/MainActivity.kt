@@ -578,7 +578,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }.show()
     }
 
-    private fun showTasksHub(filter: String = "ALL", query: String = "") {
+    private fun showTasksHub(filter: String = "ALL", query: String = "", sort: String = "NEWEST") {
         val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
         val visibleIndices = (0 until tasks.length()).filter { i ->
             val task = tasks.getJSONObject(i)
@@ -590,13 +590,29 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             matchesFilter && task.optString("title", "Task").contains(query, ignoreCase = true)
         }
+        val sortedIndices = visibleIndices.sortedWith(Comparator { a, b ->
+            val taskA = tasks.getJSONObject(a)
+            val taskB = tasks.getJSONObject(b)
+            when (sort) {
+                "DUE" -> {
+                    val dueA = taskA.optLong("due_at", 0L).let { if (it > 0L) it else Long.MAX_VALUE }
+                    val dueB = taskB.optLong("due_at", 0L).let { if (it > 0L) it else Long.MAX_VALUE }
+                    dueA.compareTo(dueB)
+                }
+                "PRIORITY" -> {
+                    fun rank(value: String) = when (value) { "HIGH" -> 0; "MEDIUM" -> 1; else -> 2 }
+                    rank(taskA.optString("priority", "MEDIUM")).compareTo(rank(taskB.optString("priority", "MEDIUM")))
+                }
+                else -> taskB.optLong("created_at", 0L).compareTo(taskA.optLong("created_at", 0L))
+            }
+        })
         val labels = mutableListOf("⌕ Search: " + if (query.isBlank()) "All tasks" else query, "⚙ Filter: " + when (filter) {
             "ACTIVE" -> "Active tasks"
             "COMPLETED" -> "Completed tasks"
             "HIGH" -> "High priority"
             else -> "All tasks"
-        })
-        visibleIndices.forEach { i ->
+        }, "↕ Sort: " + when (sort) { "DUE" -> "Due date"; "PRIORITY" -> "Priority"; else -> "Newest first" })
+        sortedIndices.forEach { i ->
             val task = tasks.getJSONObject(i)
             val due = task.optLong("due_at", 0L)
             val dueLabel = if (due > 0L) " • " + SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(due)) else ""
@@ -614,9 +630,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     AlertDialog.Builder(this).setTitle("Search tasks")
                         .setView(searchInput)
                         .setNegativeButton("Cancel", null)
-                        .setNeutralButton("Clear") { _, _ -> showTasksHub(filter, "") }
-                        .setPositiveButton("Search") { _, _ -> showTasksHub(filter, searchInput.text.toString().trim()) }
+                        .setNeutralButton("Clear") { _, _ -> showTasksHub(filter, "", sort) }
+                        .setPositiveButton("Search") { _, _ -> showTasksHub(filter, searchInput.text.toString().trim(), sort) }
                         .show()
+                    return@setItems
+                }
+                if (which == 2) {
+                    val sortLabels = arrayOf("Newest first", "Due date (soonest)", "Priority (high first)")
+                    val sortValues = arrayOf("NEWEST", "DUE", "PRIORITY")
+                    AlertDialog.Builder(this).setTitle("Sort tasks")
+                        .setSingleChoiceItems(sortLabels, sortValues.indexOf(sort).coerceAtLeast(0)) { dialog, selected ->
+                            dialog.dismiss()
+                            showTasksHub(filter, query, sortValues[selected])
+                        }.setNegativeButton("Cancel", null).show()
                     return@setItems
                 }
                 if (which == 1) {
@@ -625,11 +651,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     AlertDialog.Builder(this).setTitle("Filter tasks")
                         .setSingleChoiceItems(filters, values.indexOf(filter).coerceAtLeast(0)) { dialog, selected ->
                             dialog.dismiss()
-                            showTasksHub(values[selected], query)
+                            showTasksHub(values[selected], query, sort)
                         }.setNegativeButton("Cancel", null).show()
                     return@setItems
                 }
-                val taskIndex = visibleIndices[which - 2]
+                val taskIndex = sortedIndices[which - 3]
                 val task = tasks.getJSONObject(taskIndex)
                 val actions = arrayOf("Mark complete / reopen", "Edit task title", "Change priority", "Delete task")
                 AlertDialog.Builder(this).setTitle(task.optString("title", "Task"))
