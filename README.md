@@ -111,3 +111,7 @@ Tasks and reminders now carry a local priority label: LOW, MEDIUM, or HIGH. New 
 
 ## Offline task filters
 The Tasks screen includes local filters for all tasks, active tasks, completed tasks, and unfinished HIGH-priority tasks. Filter selection is applied on-device and preserves each task's existing edit, completion, priority, delete, and reminder actions.
+
+
+## Offline task search
+Search task titles directly in the local Tasks screen. Search can be combined with the All, Active, Completed, and High priority filters; clearing the search restores the current filter's full results. Search is on-device and requires no network or API.
