@@ -64,3 +64,6 @@ Gemini online features require your own API key. Keep it private: do not paste i
 - Main activity is locked to portrait orientation for a phone-first 9:16-style experience.
 
 - Added a gently pulsing central AI core animation and a voice-log panel that reflects voice recognition request/results. The waveform graphic is decorative, not microphone amplitude telemetry.
+
+- Free API Hub with working no-key integrations: Open-Meteo weather/geocoding, Frankfurter reference currency rates, and REST Countries country metadata.
+- Public API requests use HTTPS, bounded connection/read timeouts, and GET-only requests; no extra provider key is stored for these three connectors.
