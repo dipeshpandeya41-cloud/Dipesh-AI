@@ -825,7 +825,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val records = try {
             TaskCsvParser.parseRecords(contents.removePrefix("\uFEFF"))
         } catch (_: IllegalArgumentException) {
-            toast("The CSV contains an unfinished quoted field.")
+            toast("The CSV formatting is invalid. Check quotes and separators.")
             return
         }
         val expectedHeader = listOf("title", "done", "priority", "due_at", "reminder_id", "repeat_daily", "created_at")
