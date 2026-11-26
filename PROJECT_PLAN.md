@@ -215,3 +215,10 @@ The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.
 ### 17. Offline task search
 - Search task titles locally and combine the query with existing task status/priority filters.
 - Provide a clear-search action and preserve task indices for existing task operations.
+
+
+## Offline task sorting
+- Add task-list sort choices: newest first, due date (soonest first), and priority (high first).
+- Preserve the selected sort while searching and filtering.
+- Place tasks without due dates after scheduled tasks in due-date order.
+- Sorting is performed locally and requires no API or subscription.
