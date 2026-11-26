@@ -202,6 +202,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setOnClickListener { openInstalledAppChooser() }
         }, matchWidth())
 
+        root.addView(Button(this).apply {
+            text = "📲 Phone Access Hub"
+            setOnClickListener { showPhoneAccessHub() }
+        }, matchWidth())
+
         val navigation = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val navActions = listOf(
             "🖼 Images" to { showImagesHub() },
@@ -1968,6 +1973,47 @@ Return a multi-file website project. For EACH file, write a heading exactly like
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("DIPESH AI spreadsheet data", content))
         toast("डेटा कॉपी हो गया। Excel/Sheets में सेल चुनकर Paste करें।")
+    }
+
+    private fun showPhoneAccessHub() {
+        val message = """
+            Screen access: Android asks for your approval before each screen-capture session.
+            
+            Camera: Opens the Android camera app when you choose to take a photo. DIPESH AI does not turn on the camera in the background.
+            
+            Installed apps: Shows apps Android makes available for launching. Choose an app to open it; other apps' private data is not accessible.
+            
+            Phone controls: Back, Home, Notifications and Quick Settings are available only through the explicitly enabled Accessibility shortcuts.
+        """.trimIndent()
+        val choices = arrayOf(
+            "Capture current screen",
+            "Open camera",
+            "Choose a photo",
+            "Browse installed apps",
+            "Manage DIPESH AI permissions",
+            "Accessibility settings"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Phone Access Hub")
+            .setMessage(message)
+            .setItems(choices) { _, which ->
+                when (which) {
+                    0 -> requestScreenCapture()
+                    1 -> openCamera()
+                    2 -> choosePhoto()
+                    3 -> openInstalledAppChooser()
+                    4 -> {
+                        val settings = Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", packageName, null)
+                        )
+                        launchSafely(settings)
+                    }
+                    5 -> launchSafely(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                }
+            }
+            .setNegativeButton("Close", null)
+            .show()
     }
 
     private fun openInstalledAppChooser() {
