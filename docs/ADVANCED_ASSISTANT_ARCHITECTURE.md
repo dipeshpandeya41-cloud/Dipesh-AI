@@ -81,3 +81,9 @@ The home screen includes seven sections matching the supplied reference:
 - **Plugins:** directory of existing built-in app integrations. It does not load arbitrary third-party plugin packages or execute downloaded code.
 
 These controls use existing Android APIs and local preferences. They are not equivalent to the full ChatGPT product's cloud Library, remote computer control, recurring task scheduler, or external plugin ecosystem.
+
+## Portrait Command Center
+
+A new phone-first dashboard is inspired by the supplied futuristic control-room reference. It contains a cyan-accented command-center panel, system/API status, a decorative central AI core, voice readiness text, analytics availability text, and quick action tiles for voice, search prompt, projects, agent development, website development, and privacy information. The main activity is requested in portrait orientation, providing a 9:16-style mobile layout rather than a landscape desktop dashboard.
+
+The analytics panel is explicitly marked as not connected: this build does not fabricate predictive analytics, process counts, network-security status, or live telemetry. The central orb is decorative and does not imply autonomous quantum processing.
