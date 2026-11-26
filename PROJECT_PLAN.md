@@ -15,7 +15,7 @@ The current source tree contains:
 - Camera capture and gallery image selection followed by Gemini image analysis.
 - One-time screen capture using Android MediaProjection consent before analysis.
 - Local conversation-history persistence using app preferences.
-- Basic offline replies when no API key is configured.
+- Offline-first mode toggle; local arithmetic with parentheses and built-in greetings/app guidance work without a network or API key. This is rule-based assistance, not an on-device large language model.
 - Phone Settings and Dialer shortcuts.
 - Searchable installed-app picker lists launchable apps with package-name hints; the user explicitly selects which app to open.
 - Accessibility Service with user-invoked Back, Home, Notifications, and Quick Settings actions.
