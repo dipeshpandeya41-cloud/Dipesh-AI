@@ -567,7 +567,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     .take(100)
                     .toList()
                 AlertDialog.Builder(this).setTitle("Results for: $term")
-                    .setMessage(if (matches.isEmpty()) "No matching lines found in saved notes." else matches.joinToString("\\n"))
+                    .setMessage(if (matches.isEmpty()) "No matching lines found in saved notes." else matches.joinToString("\n"))
                     .setPositiveButton("OK", null).show()
             }.show()
     }
