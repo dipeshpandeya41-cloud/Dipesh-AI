@@ -62,3 +62,5 @@ Gemini online features require your own API key. Keep it private: do not paste i
 
 - Futuristic portrait Command Center inspired by the supplied reference: neon cyan panels, central AI core, system status, voice log, analytics status, and quick assistant actions.
 - Main activity is locked to portrait orientation for a phone-first 9:16-style experience.
+
+- Added a gently pulsing central AI core animation and a voice-log panel that reflects voice recognition request/results. The waveform graphic is decorative, not microphone amplitude telemetry.
