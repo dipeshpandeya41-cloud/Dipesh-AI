@@ -4,6 +4,16 @@
 
 DIPESH AI is being developed as a polished Android assistant for Hindi and mixed Hindi-English conversations, voice interaction, image understanding, and transparent user-triggered phone tools.
 
+## Free Video Editing Studio
+
+DIPESH AI includes exactly three video-editing project-generation skills:
+
+- **Remotion** — React and TypeScript programmatic video compositions. Review Remotion's licensing terms for your intended use; not every commercial use is necessarily free.
+- **FFmpeg** — local command-line trimming, joining, scaling, subtitles, audio mixing, and encoding workflows.
+- **MoviePy** — Python-based clip assembly, text overlays, transitions, and audio workflows.
+
+The Video Studio generates editable starter project files and can export them as a ZIP. It does not bundle these external tools, render videos inside the Android app, or execute generated scripts. Generated projects require the relevant toolchain to be installed separately. No paid API is added; project generation uses the app's existing optional Gemini key and its applicable quota.
+
 ## What is in the repository now
 - Kotlin Android app using Android Views, with role-labelled chat bubbles and persistent conversation rendering
 - Gemini chat and image-analysis request code; visible AI connection status (offline, saved key, connecting, success, failure); API credentials encrypted using Android Keystore and sent in the `x-goog-api-key` header
