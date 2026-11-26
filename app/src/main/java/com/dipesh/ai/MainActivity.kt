@@ -789,10 +789,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         dialog.show()
     }
 
-    private fun csvCell(value: String): String {
-        val quote = 34.toChar()
-        return quote + value.replace(quote.toString(), quote.toString() + quote.toString()) + quote
-    }
+    private fun csvCell(value: String): String = TaskCsvEncoder.encodeCell(value)
 
     private fun exportLocalTasksCsv() {
         val tasks = taskStorage.load()
