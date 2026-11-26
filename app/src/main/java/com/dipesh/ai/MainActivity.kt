@@ -839,7 +839,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         showAnswer("Loading $country public holidays for $year…")
         thread {
             val result = try {
-                val holidays = apiGetArray("https://nagerholidays.com/api/v4/Holidays/$country/$year")
+                val holidays = apiGetArray("https://date.nager.at/api/v3/PublicHolidays/$year/$country")
                 if (holidays.length() == 0) throw Exception("No holidays returned for this country/year.")
                 buildString {
                     append("Public holidays • ").append(country).append(" • ").append(year)
@@ -995,27 +995,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 "Dictionary lookup failed: " + (e.message ?: "network error")
             }
             runOnUiThread { showAnswer(result) }
-        }
-    }
-
-    private fun apiGetArray(address: String): JSONArray {
-        val url = URL(address)
-        require(url.protocol == "https") { "Only HTTPS APIs are allowed." }
-        val connection = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 10000
-            readTimeout = 12000
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "DIPESH-AI-Android/1.0")
-        }
-        try {
-            val code = connection.responseCode
-            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (code !in 200..299) throw Exception("HTTP $code: " + body.take(180))
-            return JSONArray(body)
-        } finally {
-            connection.disconnect()
         }
     }
 
