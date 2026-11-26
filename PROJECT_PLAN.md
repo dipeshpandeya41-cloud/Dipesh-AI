@@ -82,6 +82,14 @@ These are observations from source code, not a claim that every feature has pass
 6. Automation — expand only safe, transparent, user-triggered Android actions.
 7. Testing and APK delivery — run GitHub Actions, fix build failures, and verify the APK artifact.
 
+
+### 9. AI agent and website development
+- Provide an AI Agent Builder for a project brief, runtime, stack, required capabilities, architecture, tool contracts, starter code, setup, and tests.
+- Provide a Website Builder that generates a responsive, accessible starter website with HTML, CSS, and JavaScript.
+- Let users review generated output, copy it, or save it through Android's file picker.
+- Treat generated code as untrusted until reviewed and tested. Never execute generated code automatically or embed API secrets in browser code.
+- Keep the first website export self-contained as index.html; multi-file projects and direct hosting/deployment remain future work.
+
 ## Build
 The repository includes a GitHub Actions workflow at .github/workflows/android.yml. Open the Actions tab, select **Build Dipesh AI APK**, and run it manually, or push a commit to main. Download the Dipesh-AI-debug-apk artifact only after the workflow succeeds.
 
