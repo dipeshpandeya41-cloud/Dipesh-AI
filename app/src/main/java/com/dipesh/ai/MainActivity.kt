@@ -91,7 +91,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16, 20, 16, 12)
-            setBackgroundColor(0xFF101827.toInt())
+            setBackgroundColor(if (prefs.getBoolean("light_theme", false)) 0xFFF2F4F8.toInt() else 0xFF101827.toInt())
         }
         root.addView(TextView(this).apply {
             text = "DIPESH AI"
@@ -179,6 +179,29 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             text = "📱 Open Installed App"
             setOnClickListener { openInstalledAppChooser() }
         }, matchWidth())
+
+        val navigation = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val navActions = listOf(
+            "🖼 Images" to { showImagesHub() },
+            "📚 Library" to { showLibraryHub() },
+            "🎨 Customize" to { showCustomizeHub() },
+            "📂 Projects" to { showProjectsHub() },
+            "🖥 Remote" to { showRemoteHub() },
+            "🕒 Scheduled" to { showScheduledHub() },
+            "🔌 Plugins" to { showPluginsHub() }
+        )
+        navActions.chunked(2).forEach { group ->
+            val navRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            group.forEach { action ->
+                navRow.addView(Button(this).apply {
+                    text = action.first
+                    setOnClickListener { action.second() }
+                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            }
+            if (group.size == 1) navRow.addView(TextView(this), LinearLayout.LayoutParams(0, 1, 1f))
+            navigation.addView(navRow, matchWidth())
+        }
+        root.addView(navigation, matchWidth())
 
         val developmentTools = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         developmentTools.addView(Button(this).apply {
@@ -293,6 +316,127 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 tts?.language = Locale.forLanguageTag(speechLanguage.text.toString().trim().ifBlank { "hi-IN" })
                 Toast.makeText(this@MainActivity, "सेटिंग सेव हो गई।", Toast.LENGTH_SHORT).show()
             }.show()
+    }
+
+    private fun showImagesHub() {
+        AlertDialog.Builder(this).setTitle("Images")
+            .setItems(arrayOf("Take a photo", "Choose from gallery", "Understand a screenshot")) { _, which ->
+                when (which) { 0 -> openCamera(); 1 -> choosePhoto(); 2 -> requestScreenCapture() }
+            }.setNegativeButton("Close", null).show()
+    }
+
+    private fun showLibraryHub() {
+        val editor = EditText(this).apply {
+            hint = "Notes, prompts, snippets, and reference text"
+            setText(prefs.getString("library_notes", ""))
+            minLines = 8
+            maxLines = 14
+            gravity = Gravity.TOP
+        }
+        AlertDialog.Builder(this).setTitle("Library • On-device notes")
+            .setView(ScrollView(this).apply { addView(editor) })
+            .setNeutralButton("Import text file") { _, _ -> openTextFile() }
+            .setNegativeButton("Close", null)
+            .setPositiveButton("Save") { _, _ ->
+                prefs.edit().putString("library_notes", editor.text.toString().take(50000)).apply()
+                toast("Saved locally in Library.")
+            }.show()
+    }
+
+    private fun showCustomizeHub() {
+        val light = prefs.getBoolean("light_theme", false)
+        AlertDialog.Builder(this).setTitle("Customize")
+            .setSingleChoiceItems(arrayOf("Dark theme", "Light theme"), if (light) 1 else 0) { dialog, which ->
+                prefs.edit().putBoolean("light_theme", which == 1).apply()
+                dialog.dismiss()
+                recreate()
+            }
+            .setNeutralButton("Reset appearance") { _, _ ->
+                prefs.edit().remove("light_theme").apply()
+                recreate()
+            }.setNegativeButton("Close", null).show()
+    }
+
+    private fun showProjectsHub() {
+        val projects = try { JSONArray(prefs.getString("saved_projects", "[]")) } catch (_: Exception) { JSONArray() }
+        if (projects.length() == 0) {
+            AlertDialog.Builder(this).setTitle("Projects")
+                .setMessage("Generated AI agent and website projects will appear here after saving.")
+                .setPositiveButton("Create AI agent") { _, _ -> showDevelopmentWorkspace(true) }
+                .setNegativeButton("Close", null)
+                .setNeutralButton("Create website") { _, _ -> showDevelopmentWorkspace(false) }.show()
+            return
+        }
+        val labels = (0 until projects.length()).map { i ->
+            val p = projects.getJSONObject(i)
+            p.optString("name", "Project") + " • " + p.optString("kind", "Project")
+        }.toTypedArray()
+        AlertDialog.Builder(this).setTitle("Projects (" + projects.length() + ")")
+            .setItems(labels) { _, which ->
+                val p = projects.getJSONObject(which)
+                val html = p.optString("kind") == "Website"
+                showDevelopmentOutput(p.optString("name", "Project"), p.optString("content", ""), if (html) "index.html" else "agent-starter.md")
+            }
+            .setNeutralButton("New agent") { _, _ -> showDevelopmentWorkspace(true) }
+            .setNegativeButton("Close", null)
+            .setPositiveButton("New website") { _, _ -> showDevelopmentWorkspace(false) }.show()
+    }
+
+    private fun saveProjectToLibrary(title: String, content: String, fileName: String) {
+        val projects = try { JSONArray(prefs.getString("saved_projects", "[]")) } catch (_: Exception) { JSONArray() }
+        val kind = if (fileName.endsWith(".html")) "Website" else "AI Agent"
+        projects.put(JSONObject().put("name", title).put("kind", kind).put("content", content).put("saved_at", System.currentTimeMillis()))
+        val trimmed = JSONArray()
+        val first = (projects.length() - 20).coerceAtLeast(0)
+        for (i in first until projects.length()) trimmed.put(projects.getJSONObject(i))
+        prefs.edit().putString("saved_projects", trimmed.toString()).apply()
+    }
+
+    private fun showRemoteHub() {
+        AlertDialog.Builder(this).setTitle("Remote")
+            .setMessage("Secure remote device access is not enabled yet. It requires explicit device pairing, authenticated sessions, visible consent, and an emergency disconnect. This build does not expose your phone or accept remote commands.")
+            .setPositiveButton("OK", null).show()
+    }
+
+    private fun showScheduledHub() {
+        val message = EditText(this).apply { hint = "Reminder or alarm label"; setSingleLine(true) }
+        AlertDialog.Builder(this).setTitle("Schedule an alarm")
+            .setMessage("DIPESH AI will open your Android Clock app. Review and confirm the alarm there.")
+            .setView(message)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Continue") { _, _ ->
+                val label = message.text.toString().trim().ifBlank { "DIPESH AI reminder" }
+                val intent = Intent(android.provider.AlarmClock.ACTION_SET_ALARM).apply {
+                    putExtra(android.provider.AlarmClock.EXTRA_MESSAGE, label)
+                    putExtra(android.provider.AlarmClock.EXTRA_SKIP_UI, false)
+                }
+                if (intent.resolveActivity(packageManager) != null) launchSafely(intent)
+                else toast("No compatible Clock app is available.")
+            }.show()
+    }
+
+    private fun showPluginsHub() {
+        val plugins = arrayOf(
+            "Gemini AI • Chat and image analysis",
+            "Camera and Gallery • User-selected images",
+            "Voice • Android speech recognition and TTS",
+            "Files • Text/CSV import and export",
+            "Termux • Launch installed Termux",
+            "Android shortcuts • Settings, Dialer, installed apps"
+        )
+        AlertDialog.Builder(this).setTitle("Plugins • Built-in tools")
+            .setItems(plugins) { _, which ->
+                when (which) {
+                    0 -> showSettings()
+                    1 -> showImagesHub()
+                    2 -> cycleVoice()
+                    3 -> openTextFile()
+                    4 -> openTermux()
+                    5 -> openInstalledAppChooser()
+                }
+            }
+            .setMessage("Only built-in, user-triggered integrations are listed. Third-party plugin installation and arbitrary plugin execution are not enabled.")
+            .setPositiveButton("Close", null).show()
     }
 
     private fun showDevelopmentWorkspace(isAgent: Boolean) {
@@ -423,6 +567,7 @@ Return a single complete, self-contained index.html in ONE html code fence, with
             }
             .setNegativeButton("Close", null)
             .setPositiveButton("Save file") { _, _ ->
+                saveProjectToLibrary(title, editor.text.toString(), fileName)
                 pendingDevelopmentExport = editor.text.toString()
                 val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
