@@ -1,0 +1,113 @@
+# Advanced assistant architecture and capability boundaries
+
+This project is designed as a free-first Android assistant. "Free-first" means choosing open-source/local components and provider free tiers where available; it cannot guarantee that every cloud API, model, speech service, or connected device will remain free forever.
+
+## Implemented in this foundation branch
+
+- Gemini API key encrypted locally with an AES-GCM key held by Android Keystore.
+- Legacy plaintext API-key preference is migrated to encrypted storage on app startup and then removed.
+- Gemini API key is sent in the `x-goog-api-key` request header, not in the URL.
+- Configurable speech-recognition locale (for example, `hi-IN` or `en-US`).
+- Cycle through TTS voices already installed on the Android device. Availability and quality depend on installed speech engines and downloaded voice data.
+- User-selected text/CSV file picker with a 50,000-character preview inserted into the composer; the user reviews and sends it.
+- Termux launcher shortcut. This opens Termux only; it does not silently execute shell commands or install packages.
+
+## Planned modules
+
+### AI and memory
+- Provider interface so local/offline and optional free-tier cloud providers can be swapped.
+- User-visible local memory with view, edit, export, and clear controls.
+- Conversation summarization with explicit user control; no API key or secret is stored in model memory.
+- Bounded retries, timeouts, cancellation, quota-aware errors, and offline fallback.
+
+### Voice
+- Installed Android TTS voices, locale selection, and optional speech-engine settings.
+- Speech recognition via Android recognizer providers.
+- Optional offline engines where the user installs a compatible engine and language pack.
+- No promise that every language or voice exists on every phone.
+
+### Files and spreadsheets
+- Android Storage Access Framework for user-selected files.
+- CSV import/export first; XLSX support requires a compatible open-source library and device testing.
+- Excel/Sheets typing should use an explicit user-triggered accessibility or input-method flow. The app must not type into an app without the user's visible action.
+- Never scrape or upload all local files. Only process files the user selects.
+
+### Termux and coding agent
+- Optional Termux hand-off for user-authored scripts.
+- Repository operations through GitHub APIs with branch/commit/PR review.
+- Downloaded skills are treated as untrusted data: inspect manifests and source, show permissions, and require confirmation before execution. No arbitrary remote code auto-execution.
+- GitHub tokens stay in Android Keystore-backed storage and are never committed.
+
+### Phone, computer, camera, and smart devices
+- Android app launching and system shortcuts only through documented intents and user-approved accessibility actions.
+- Screen capture only after Android's MediaProjection consent prompt, for a one-time capture.
+- External computer, camera-feed, TV, and smart-home control requires a compatible paired agent/device, network protocol, and explicit pairing/permissions. There is no universal Android API that controls every computer or TV.
+- Sensitive actions such as calls, messages, purchases, account changes, and settings changes require a clear confirmation.
+
+## Delivery gates
+
+1. Compile and lint in GitHub Actions.
+2. Review workflow logs and fix build failures.
+3. Download the debug APK artifact and test on the target Android phone.
+4. Test API-key migration, voice locale/voice switching, file selection, screen consent, and accessibility behavior on-device.
+5. Mark each capability complete only after implementation and device verification.
+
+## Privacy and cost
+
+- No paid dependency is required by the current Android foundation.
+- Cloud AI still requires an internet connection and a provider API key; provider free quotas, availability, and terms can change.
+- Keep secrets out of source control, chat messages, logs, screenshots, and crash reports.
+- Request only the Android permissions needed for the feature the user starts.
+
+## Development workspaces
+
+The Android home screen now includes two Gemini-powered starter builders:
+
+- **AI Agent Builder:** takes a name, purpose, target runtime, preferred technology, and requirements; generates an architecture, file tree, starter code, tool/function contracts, permission boundaries, setup guidance, and tests in a Markdown result.
+- **Website Builder:** takes a site brief, category, preferred stack, and requirements; requests a responsive, accessible, self-contained HTML document with embedded CSS and JavaScript, saved as `index.html`.
+
+Both builders require the user's configured Gemini API key. Results remain editable in the app and can be copied or saved with Android's document picker. Generated code is not executed or deployed by the app; users should inspect and test it before use. Multi-file project packaging, previews, GitHub publishing, and hosting integrations are future work.
+
+## Reference-image navigation modules
+
+The home screen includes seven sections matching the supplied reference:
+
+- **Images:** camera capture, gallery selection, and user-approved one-shot screen analysis.
+- **Library:** on-device notes and import of a selected text file. Notes are stored in app preferences.
+- **Customize:** persistent dark/light appearance preference.
+- **Projects:** reopen up to 20 saved agent and website outputs. A project is saved to this list when the user chooses Save file in the generated-output dialog.
+- **Remote:** informational capability page only. Secure remote control is not implemented; no inbound remote session is opened.
+- **Scheduled:** opens the Android Clock alarm screen with a label and selected time; the user confirms the alarm in Clock.
+- **Plugins:** directory of existing built-in app integrations. It does not load arbitrary third-party plugin packages or execute downloaded code.
+
+These controls use existing Android APIs and local preferences. They are not equivalent to the full ChatGPT product's cloud Library, remote computer control, recurring task scheduler, or external plugin ecosystem.
+
+## Portrait Command Center
+
+A new phone-first dashboard is inspired by the supplied futuristic control-room reference. It contains a cyan-accented command-center panel, system/API status, a decorative central AI core, voice readiness text, analytics availability text, and quick action tiles for voice, search prompt, projects, agent development, website development, and privacy information. The main activity is requested in portrait orientation, providing a 9:16-style mobile layout rather than a landscape desktop dashboard.
+
+The analytics panel is explicitly marked as not connected: this build does not fabricate predictive analytics, process counts, network-security status, or live telemetry. The central orb is decorative and does not imply autonomous quantum processing.
+
+## Command Center motion and voice feedback
+
+The central orb now has a subtle repeating scale pulse using Android property animators. Animators are cancelled in `onDestroy` to avoid continuing work after the activity closes. The voice panel updates when Android speech recognition is launched and when recognized text is returned. Its bar glyph is a static decorative motif, not a live audio waveform, and the app does not record continuous microphone amplitude for this display.
+
+## Free API Hub — implemented integrations
+
+The app's Plugins section includes a **Free API Hub** with three working no-key connectors:
+
+1. **Open-Meteo** — city geocoding followed by current weather (temperature, apparent temperature, humidity, wind, local observation time). Its free endpoint is limited to non-commercial use and published request limits; attribution under CC BY 4.0 is required. See [Open-Meteo terms](https://open-meteo.com/en/terms) and [API documentation](https://open-meteo.com/en/docs).
+2. **Frankfurter** — converts a user-entered amount using central-bank reference exchange rates. No API key is required; rates are not live trading or payment quotes. See [Frankfurter](https://frankfurter.dev/).
+3. **REST Countries** — read-only country metadata including capital, region, population, currencies, languages, and country code. See [REST Countries API](https://restcountries.com/).
+
+Requests are initiated by the user, use HTTPS GET, have connection/read timeouts, and do not require storing provider keys. Gemini remains a separate optional API with a user-supplied key and a limited free tier. The hub is a curated set of integrations, not a promise to include every API or provide unlimited/permanent free service. Provider terms, quotas, availability, and commercial-use restrictions can change; re-check them before distribution or commercial use.
+
+## Free public holiday calendar
+
+The Free API Hub includes Nager.Date v4 public holidays. Users enter a two-letter ISO country code (for example, `NP` or `IN`); the app requests the current calendar year's holiday list and displays dates, names, and available holiday types. The public REST endpoint does not require an API key or paid subscription; use it fairly and check current provider availability and terms. Official project and endpoint examples: [Nager.Date](https://github.com/nager/Nager.Date) and [REST API v4 examples](https://github.com/nager/Nager.Date/blob/main/doc/examples/rest-api.md).
+
+## Free knowledge and book search
+
+The Free API Hub includes Wikipedia article search via the Wikimedia REST API and Open Library book metadata search. Both use public no-key endpoints. Wikimedia documents its REST interface for wiki content and search. <https://www.mediawiki.org/wiki/API:REST_API> Open Library supports JSON search and asks applications to identify themselves, cache responses, and keep request volume modest; its default anonymous rate is one request per second. <https://openlibrary.org/developers/api>
+
+Results include source-page links. Wikipedia content should be checked against cited references for important decisions. Open Library search results are bibliographic metadata and do not promise that a book is available for free download. These services are intended for interactive user searches, not bulk harvesting.
