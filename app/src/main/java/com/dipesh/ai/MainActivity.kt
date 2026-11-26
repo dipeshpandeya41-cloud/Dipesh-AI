@@ -1848,6 +1848,13 @@ Return a multi-file website project. For EACH file, write a heading exactly like
 
     private fun offlineReply(message: String): String {
         val q = message.trim().lowercase(Locale.ROOT)
+        offlineQuickConversion(q)?.let { return it }
+        val percent = Regex("^\\s*(?:what is )?([0-9]+(?:\\.[0-9]+)?)\\s*%\\s*(?:of|का)\\s*([0-9]+(?:\\.[0-9]+)?)\\s*\\??$").matchEntire(q)
+        if (percent != null) {
+            val rate = percent.groupValues[1].toDouble()
+            val amount = percent.groupValues[2].toDouble()
+            return "$rate% of $amount = " + formatOfflineNumber(amount * rate / 100.0)
+        }
         val math = q.removePrefix("calculate").removePrefix("गणना").trim()
         if (math.length in 1..80 && math.matches(Regex("[0-9+\\-*/(). \\t]+")) &&
             math.any { it in "+-*/" }) {
@@ -1863,7 +1870,7 @@ Return a multi-file website project. For EACH file, write a heading exactly like
             q.contains("नाम") || q.contains("who are you") ->
                 "मैं Dipesh AI हूँ, आपका Android assistant। Offline mode में जवाब local rules से बनते हैं; यह downloaded large language model नहीं है।"
             q.contains("मदद") || q.contains("help") || q == "?" ->
-                "Offline features: basic greetings, app guidance, and arithmetic such as 25 * (4 + 2). For general AI chat, image understanding, and project generation, turn off Offline-first mode and configure your Gemini key."
+                "Offline features: greetings, app guidance, arithmetic, percentage calculations (15% of 200), and unit conversions (5 km to mi). For general AI chat, image understanding, and project generation, turn off Offline-first mode and configure your Gemini key."
             q.contains("website") ->
                 "Open Website Builder to create a starter website. Online generation requires your Gemini API key and internet access."
             q.contains("agent") ->
@@ -1871,9 +1878,41 @@ Return a multi-file website project. For EACH file, write a heading exactly like
             q.contains("voice") || q.contains("भाषा") ->
                 "Open AI/API Settings, choose an installed speech language, and select an available voice. Voice data availability depends on your Android text-to-speech engine."
             else ->
-                "Offline mode is active. I can answer a few built-in help topics and calculate arithmetic. For open-ended questions, disable Offline-first mode in AI/API Settings and use your Gemini key. No local large language model is installed."
+                "Offline mode is active. I can answer built-in help topics, calculate arithmetic and percentages, and convert common units. For open-ended questions, disable Offline-first mode in AI/API Settings and use your Gemini key. No local large language model is installed."
         }
     }
+
+    private fun offlineQuickConversion(query: String): String? {
+        val match = Regex("^(?:convert\\s+)?([0-9]+(?:\\.[0-9]+)?)\\s*(km|mi|m|ft|cm|in|kg|lb|g|oz|l|ml|c|f)\\s+(?:to|में)\\s*(km|mi|m|ft|cm|in|kg|lb|g|oz|l|ml|c|f)$").matchEntire(query)
+            ?: return null
+        val amount = match.groupValues[1].toDoubleOrNull() ?: return null
+        val from = match.groupValues[2]
+        val to = match.groupValues[3]
+        val dimensions = mapOf(
+            "km" to "length", "mi" to "length", "m" to "length", "ft" to "length", "cm" to "length", "in" to "length",
+            "kg" to "mass", "lb" to "mass", "g" to "mass", "oz" to "mass",
+            "l" to "volume", "ml" to "volume", "c" to "temperature", "f" to "temperature"
+        )
+        if (dimensions[from] != dimensions[to]) return "Those units belong to different measurement categories."
+        val result = when (dimensions[from]) {
+            "temperature" -> {
+                val celsius = if (from == "c") amount else (amount - 32.0) * 5.0 / 9.0
+                if (to == "c") celsius else celsius * 9.0 / 5.0 + 32.0
+            }
+            else -> {
+                val toBase = mapOf(
+                    "km" to 1000.0, "mi" to 1609.344, "m" to 1.0, "ft" to 0.3048, "cm" to 0.01, "in" to 0.0254,
+                    "kg" to 1.0, "lb" to 0.45359237, "g" to 0.001, "oz" to 0.028349523125,
+                    "l" to 1.0, "ml" to 0.001
+                )
+                amount * (toBase[from] ?: return null) / (toBase[to] ?: return null)
+            }
+        }
+        return "$amount $from = \${formatOfflineNumber(result)} $to (offline conversion)"
+    }
+
+    private fun formatOfflineNumber(value: Double): String =
+        String.format(Locale.US, "%.8f", value).trimEnd('0').trimEnd('.').ifBlank { "0" }
 
     private fun evaluateOfflineMath(expression: String): Double? {
         return try {
