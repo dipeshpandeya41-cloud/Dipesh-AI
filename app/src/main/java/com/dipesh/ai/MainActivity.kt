@@ -456,6 +456,19 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             text = "Choose an installed speech language"
             setOnClickListener { showInstalledSpeechLanguages(speechLanguage) }
         })
+        val offlineModeButton = Button(this).apply {
+            fun refreshLabel() {
+                text = if (prefs.getBoolean("offline_mode", false)) "Offline-first mode: ON" else "Offline-first mode: OFF"
+            }
+            refreshLabel()
+            setOnClickListener {
+                val enabled = !prefs.getBoolean("offline_mode", false)
+                prefs.edit().putBoolean("offline_mode", enabled).apply()
+                refreshLabel()
+                toast(if (enabled) "Offline-first mode enabled." else "Offline-first mode disabled.")
+            }
+        }
+        panel.addView(offlineModeButton)
         panel.addView(TextView(this).apply {
             text = "Optional memory is stored locally. If saved, its contents are sent to Gemini with your AI requests. Do not save passwords, API keys, or highly sensitive information."
             textSize = 12f
@@ -1743,7 +1756,11 @@ Return a multi-file website project. For EACH file, write a heading exactly like
         addMessageBubble("DIPESH AI", "जवाब तैयार हो रहा है…")
         input.text.clear()
         val key = secureKeys.read().orEmpty()
-        if (key.isBlank()) { showAnswer(offlineReply(message)); updateConnectionStatus("Offline mode • Add a Gemini API key in Settings", 0xFFFFC46B.toInt()); return }
+        if (prefs.getBoolean("offline_mode", false) || key.isBlank()) {
+            showAnswer(offlineReply(message))
+            updateConnectionStatus("Offline-first mode • Local responses only", 0xFFFFC46B.toInt())
+            return
+        }
         updateConnectionStatus("Connecting to Gemini…", 0xFF8BC5FF.toInt())
         thread {
             val answer = try { requestGemini(message, key, null) }
@@ -1830,16 +1847,89 @@ Return a multi-file website project. For EACH file, write a heading exactly like
     }
 
     private fun offlineReply(message: String): String {
-        val q = message.lowercase(Locale.ROOT)
-        return when {
-            listOf("नमस्ते", "हेलो", "hello", "hi").any { q.contains(it) } ->
-                "नमस्ते! मैं Dipesh AI हूँ। आप मुझसे सवाल पूछ सकते हैं।"
-            q.contains("नाम") || q.contains("who are you") ->
-                "मैं Dipesh AI हूँ, आपका हिंदी Android Assistant।"
-            q.contains("मदद") || q.contains("help") ->
-                "मैं ऑफलाइन बेसिक जवाब दे सकता हूँ। पूरी AI चैट और फोटो पहचान के लिए Gemini API key जोड़ें।"
-            else -> "अभी API key उपलब्ध नहीं है। AI सेटिंग खोलकर अपनी Gemini key जोड़ें; बेसिक ऑफलाइन सहायता चालू है।"
+        val q = message.trim().lowercase(Locale.ROOT)
+        val math = q.removePrefix("calculate").removePrefix("गणना").trim()
+        if (math.length in 1..80 && math.matches(Regex("[0-9+\\-*/(). \\t]+")) &&
+            math.any { it in "+-*/" }) {
+            val result = evaluateOfflineMath(math)
+            if (result != null && result.isFinite()) {
+                return "Offline calculator result: " + String.format(Locale.US, "%.8f", result).trimEnd('0').trimEnd('.')
+            }
+            return "I could not calculate that expression. Check the numbers and operators."
         }
+        return when {
+            listOf("नमस्ते", "हेलो", "hello", "hi").any { q == it || q.startsWith("$it ") } ->
+                "नमस्ते! मैं Dipesh AI हूँ। Offline mode में basic help और calculations कर सकता हूँ।"
+            q.contains("नाम") || q.contains("who are you") ->
+                "मैं Dipesh AI हूँ, आपका Android assistant। Offline mode में जवाब local rules से बनते हैं; यह downloaded large language model नहीं है।"
+            q.contains("मदद") || q.contains("help") || q == "?" ->
+                "Offline features: basic greetings, app guidance, and arithmetic such as 25 * (4 + 2). For general AI chat, image understanding, and project generation, turn off Offline-first mode and configure your Gemini key."
+            q.contains("website") ->
+                "Open Website Builder to create a starter website. Online generation requires your Gemini API key and internet access."
+            q.contains("agent") ->
+                "Open AI Agent Builder and choose a starter template. Online code generation requires your Gemini API key and internet access."
+            q.contains("voice") || q.contains("भाषा") ->
+                "Open AI/API Settings, choose an installed speech language, and select an available voice. Voice data availability depends on your Android text-to-speech engine."
+            else ->
+                "Offline mode is active. I can answer a few built-in help topics and calculate arithmetic. For open-ended questions, disable Offline-first mode in AI/API Settings and use your Gemini key. No local large language model is installed."
+        }
+    }
+
+    private fun evaluateOfflineMath(expression: String): Double? {
+        return try {
+            class Parser(private val source: String) {
+                private var index = 0
+                private fun spaces() { while (index < source.length && source[index].isWhitespace()) index++ }
+                fun parse(): Double {
+                    val value = addSub()
+                    spaces()
+                    require(index == source.length)
+                    return value
+                }
+                private fun addSub(): Double {
+                    var value = multiplyDivide()
+                    while (true) {
+                        spaces()
+                        if (index >= source.length || (source[index] != '+' && source[index] != '-')) return value
+                        val op = source[index++]
+                        val right = multiplyDivide()
+                        value = if (op == '+') value + right else value - right
+                    }
+                }
+                private fun multiplyDivide(): Double {
+                    var value = unary()
+                    while (true) {
+                        spaces()
+                        if (index >= source.length || (source[index] != '*' && source[index] != '/')) return value
+                        val op = source[index++]
+                        val right = unary()
+                        if (op == '/' && right == 0.0) throw IllegalArgumentException("division by zero")
+                        value = if (op == '*') value * right else value / right
+                    }
+                }
+                private fun unary(): Double {
+                    spaces()
+                    if (index < source.length && (source[index] == '+' || source[index] == '-')) {
+                        val op = source[index++]
+                        val value = unary()
+                        return if (op == '-') -value else value
+                    }
+                    if (index < source.length && source[index] == '(') {
+                        index++
+                        val value = addSub()
+                        spaces()
+                        require(index < source.length && source[index] == ')')
+                        index++
+                        return value
+                    }
+                    val start = index
+                    while (index < source.length && (source[index].isDigit() || source[index] == '.')) index++
+                    require(index > start)
+                    return source.substring(start, index).toDouble()
+                }
+            }
+            Parser(expression).parse()
+        } catch (_: Exception) { null }
     }
 
     private fun launchSafely(intent: Intent) {
