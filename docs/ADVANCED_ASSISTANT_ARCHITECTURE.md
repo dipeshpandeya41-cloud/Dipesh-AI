@@ -67,3 +67,17 @@ The Android home screen now includes two Gemini-powered starter builders:
 - **Website Builder:** takes a site brief, category, preferred stack, and requirements; requests a responsive, accessible, self-contained HTML document with embedded CSS and JavaScript, saved as `index.html`.
 
 Both builders require the user's configured Gemini API key. Results remain editable in the app and can be copied or saved with Android's document picker. Generated code is not executed or deployed by the app; users should inspect and test it before use. Multi-file project packaging, previews, GitHub publishing, and hosting integrations are future work.
+
+## Reference-image navigation modules
+
+The home screen includes seven sections matching the supplied reference:
+
+- **Images:** camera capture, gallery selection, and user-approved one-shot screen analysis.
+- **Library:** on-device notes and import of a selected text file. Notes are stored in app preferences.
+- **Customize:** persistent dark/light appearance preference.
+- **Projects:** reopen up to 20 saved agent and website outputs. A project is saved to this list when the user chooses Save file in the generated-output dialog.
+- **Remote:** informational capability page only. Secure remote control is not implemented; no inbound remote session is opened.
+- **Scheduled:** opens the Android Clock alarm screen with a label and selected time; the user confirms the alarm in Clock.
+- **Plugins:** directory of existing built-in app integrations. It does not load arbitrary third-party plugin packages or execute downloaded code.
+
+These controls use existing Android APIs and local preferences. They are not equivalent to the full ChatGPT product's cloud Library, remote computer control, recurring task scheduler, or external plugin ecosystem.
