@@ -578,17 +578,43 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }.show()
     }
 
-    private fun showTasksHub() {
+    private fun showTasksHub(filter: String = "ALL") {
         val tasks = try { JSONArray(prefs.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
-        val labels = (0 until tasks.length()).map { i ->
+        val visibleIndices = (0 until tasks.length()).filter { i ->
+            val task = tasks.getJSONObject(i)
+            when (filter) {
+                "ACTIVE" -> !task.optBoolean("done")
+                "COMPLETED" -> task.optBoolean("done")
+                "HIGH" -> !task.optBoolean("done") && task.optString("priority", "MEDIUM") == "HIGH"
+                else -> true
+            }
+        }
+        val labels = mutableListOf("⚙ Filter: " + when (filter) {
+            "ACTIVE" -> "Active tasks"
+            "COMPLETED" -> "Completed tasks"
+            "HIGH" -> "High priority"
+            else -> "All tasks"
+        })
+        visibleIndices.forEach { i ->
             val task = tasks.getJSONObject(i)
             val due = task.optLong("due_at", 0L)
             val dueLabel = if (due > 0L) " • " + SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault()).format(Date(due)) else ""
-            (if (task.optBoolean("done")) "✓ " else "○ ") + "[" + task.optString("priority", "MEDIUM") + "] " + task.optString("title", "Task") + dueLabel + if (task.optBoolean("repeat_daily")) " • Daily" else ""
-        }.toTypedArray()
-        val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${tasks.length()}")
-            .setItems(labels) { _, which ->
-                val task = tasks.getJSONObject(which)
+            labels.add((if (task.optBoolean("done")) "✓ " else "○ ") + "[" + task.optString("priority", "MEDIUM") + "] " + task.optString("title", "Task") + dueLabel + if (task.optBoolean("repeat_daily")) " • Daily" else "")
+        }
+        val builder = AlertDialog.Builder(this).setTitle("Offline Tasks • ${visibleIndices.size}/${tasks.length()}")
+            .setItems(labels.toTypedArray()) { _, which ->
+                if (which == 0) {
+                    val filters = arrayOf("All tasks", "Active tasks", "Completed tasks", "High priority")
+                    val values = arrayOf("ALL", "ACTIVE", "COMPLETED", "HIGH")
+                    AlertDialog.Builder(this).setTitle("Filter tasks")
+                        .setSingleChoiceItems(filters, values.indexOf(filter).coerceAtLeast(0)) { dialog, selected ->
+                            dialog.dismiss()
+                            showTasksHub(values[selected])
+                        }.setNegativeButton("Cancel", null).show()
+                    return@setItems
+                }
+                val taskIndex = visibleIndices[which - 1]
+                val task = tasks.getJSONObject(taskIndex)
                 val actions = arrayOf("Mark complete / reopen", "Edit task title", "Change priority", "Delete task")
                 AlertDialog.Builder(this).setTitle(task.optString("title", "Task"))
                     .setItems(actions) { _, action ->
@@ -598,15 +624,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                                 task.put("done", completed)
                                 if (completed) cancelLocalReminder(task)
                                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
-                                showTasksHub()
+                                showTasksHub(filter)
                             }
-                            1 -> showEditLocalTask(tasks, which)
-                            2 -> showTaskPriorityPicker(tasks, which)
+                            1 -> showEditLocalTask(tasks, taskIndex)
+                            2 -> showTaskPriorityPicker(tasks, taskIndex)
                             3 -> {
                                 cancelLocalReminder(task)
-                                tasks.remove(which)
+                                tasks.remove(taskIndex)
                                 prefs.edit().putString("local_tasks", tasks.toString()).apply()
-                                showTasksHub()
+                                showTasksHub(filter)
                             }
                         }
                     }.setNegativeButton("Cancel", null).show()
