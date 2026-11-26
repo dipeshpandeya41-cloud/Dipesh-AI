@@ -1152,6 +1152,55 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         panel.addView(platform)
         panel.addView(stack)
         panel.addView(features)
+        val templatePicker = TextView(this).apply {
+            text = if (isAgent) "⚡ Choose an agent starter template" else "⚡ Choose a website starter template"
+            textSize = 14f
+            setTextColor(0xFF8BC5FF.toInt())
+            setPadding(10, 14, 10, 14)
+        }
+        templatePicker.setOnClickListener {
+            val labels = if (isAgent) arrayOf(
+                "Research assistant", "Personal task planner", "Document Q&A assistant",
+                "Customer support agent", "Website coding agent"
+            ) else arrayOf(
+                "Personal portfolio", "Small business website", "Online store frontend",
+                "Blog / magazine", "Product landing page"
+            )
+            AlertDialog.Builder(this)
+                .setTitle("Select a starter template")
+                .setItems(labels) { _, which ->
+                    if (isAgent) {
+                        val templates = arrayOf(
+                            Triple("Research Assistant", "Research a topic, compare trustworthy sources, and prepare a cited summary with human review.", "Search tool adapter, source quality checks, citation list, approval before external actions"),
+                            Triple("Personal Task Planner", "Turn my goals into a daily plan, track tasks, and suggest realistic priorities.", "Task CRUD, reminders handoff, local storage, user confirmation before scheduling"),
+                            Triple("Document Q&A Assistant", "Answer questions about documents I select and quote relevant passages.", "User-selected file input, text chunking, retrieval, citations, no background file access"),
+                            Triple("Customer Support Agent", "Answer common customer questions using an approved FAQ and escalate uncertain cases.", "FAQ retrieval, confidence threshold, escalation flow, no invented policy answers"),
+                            Triple("Website Coding Agent", "Help plan, write, review, and test small website projects.", "Project workspace, file generation, test checklist, review before file changes")
+                        )
+                        val item = templates[which]
+                        name.setText(item.first)
+                        idea.setText(item.second)
+                        platform.setText("Android-friendly, local-first starter")
+                        stack.setText("Kotlin or Python; free/open-source tools")
+                        features.setText(item.third)
+                    } else {
+                        val templates = arrayOf(
+                            Triple("Personal Portfolio", "A mobile-first portfolio for a creator, with introduction, skills, projects, and contact section.", "Hero, about, skills, project cards, contact links, responsive navigation"),
+                            Triple("Small Business Website", "A trustworthy website for a local small business to explain services and help customers contact the owner.", "Home, services, about, opening details placeholder, contact CTA, map link placeholder"),
+                            Triple("Online Store Frontend", "A product catalogue storefront demo; do not process real payments.", "Product grid, category filters, cart demo, clear demo-only checkout notice"),
+                            Triple("Blog / Magazine", "A readable publication website with articles and topic navigation.", "Featured article, article cards, categories, search UI, accessible typography"),
+                            Triple("Product Landing Page", "A conversion-focused landing page for a product or app.", "Hero, benefits, feature sections, testimonials placeholders, FAQ, CTA")
+                        )
+                        val item = templates[which]
+                        name.setText(item.first)
+                        idea.setText(item.second)
+                        platform.setText("Responsive mobile-first website")
+                        stack.setText("Vanilla HTML, CSS, JavaScript")
+                        features.setText(item.third)
+                    }
+                }.show()
+        }
+        panel.addView(templatePicker)
         AlertDialog.Builder(this)
             .setTitle(if (isAgent) "AI Agent Development" else "Website Development")
             .setView(ScrollView(this).apply { addView(panel) })
