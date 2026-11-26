@@ -118,6 +118,10 @@ These are observations from source code, not a claim that every feature has pass
 - REST Countries read-only country metadata lookup; no API key.
 - All calls are user-triggered HTTPS GET requests with timeouts and visible error messages. These are selected integrations, not every public API on the internet. Free tiers, availability, terms, and limits can change; no unlimited quota is promised.
 
+
+### 14. Free public holiday calendar
+- Added Nager.Date v4 public holiday lookup for a user-entered ISO 3166-1 alpha-2 country code and the current year. No API key or paid subscription is required. The public service is rate-limited by fair-use expectations and may change; see provider documentation.
+
 ## Build
 The repository includes a GitHub Actions workflow at .github/workflows/android.yml. Open the Actions tab, select **Build Dipesh AI APK**, and run it manually, or push a commit to main. Download the Dipesh-AI-debug-apk artifact only after the workflow succeeds.
 
