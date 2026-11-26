@@ -18,6 +18,8 @@ DIPESH AI is being developed as a polished Android assistant for Hindi and mixed
 - Searchable installed-app picker with package-name hints; the user explicitly selects which app to open
 - User-triggered Accessibility shortcuts (Back, Home, Notifications, Quick Settings)
 - GitHub Actions debug-APK build workflow
+- AI Agent Builder: collect an agent brief and generate a starter architecture, file tree, tool contracts, code, setup steps, and tests with Gemini; review, copy, or save the result.
+- Website Builder: generate a responsive single-file HTML/CSS/JavaScript website with Gemini; review, copy, or save it as index.html.
 
 > These items are present in source code; they are not a claim that every feature has passed device testing.
 
