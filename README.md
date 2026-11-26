@@ -95,3 +95,7 @@ The Tasks hub can schedule a device-local reminder using Android's inexact alarm
 
 ## Task management and recurring reminders
 Tasks can now be edited or deleted from the Tasks hub. Reminder notifications include a **Snooze 10 min** action that updates the saved due time and schedules the reminder again. Reminders can be scheduled once or repeated daily; daily reminders schedule their next occurrence after delivery. All scheduling remains local and uses inexact Android alarms, so Android battery management may delay delivery. Completing a task cancels its pending reminder. Reboot restoration uses the system boot broadcast and retries on app startup.
+
+
+## Reminder timing improvements
+Daily reminders retain their original local clock time across deliveries instead of drifting forward by 24 hours from the notification delivery time. Snoozing changes only the next due time and preserves the daily schedule anchor. Editing a reminder title refreshes its pending alarm so the notification uses the updated title. Existing daily reminders without an anchor are upgraded when their next occurrence is scheduled.
