@@ -4,6 +4,6 @@ package com.dipesh.ai
 internal object TaskCsvEncoder {
     fun encodeCell(value: String): String {
         val quote = '"'
-        return quote + value.replace(quote.toString(), """") + quote
+        return quote + value.replace(quote.toString(), "\"\"") + quote
     }
 }
