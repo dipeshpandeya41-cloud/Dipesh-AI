@@ -33,7 +33,7 @@ class TaskCsvParserTest {
     fun parsesCarriageReturnOnlyRecords() {
         assertEquals(
             listOf(listOf("a", "b"), listOf("1", "2")),
-            TaskCsvParser.parseRecords("a,b\\r1,2\\r")
+            TaskCsvParser.parseRecords("a,b\r1,2\r")
         )
     }
 
