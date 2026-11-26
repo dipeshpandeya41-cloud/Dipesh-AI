@@ -1160,6 +1160,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "English dictionary • Dictionary API • No key",
             "Offline dictionary cache • Saved words",
             "Free text translation • MyMemory • No key",
+            "Recent earthquakes • USGS • No key",
             "API directory and terms",
             "Gemini AI • User's own free-tier key"
         )
@@ -1175,12 +1176,60 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     6 -> promptDictionaryLookup()
                     7 -> showOfflineDictionaryCache()
                     8 -> promptFreeTranslation()
-                    9 -> showApiDirectoryInfo()
-                    10 -> showSettings()
+                    9 -> promptRecentEarthquakes()
+                    10 -> showApiDirectoryInfo()
+                    11 -> showSettings()
                 }
             }
             .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
             .setPositiveButton("Close", null).show()
+    }
+
+    private fun promptRecentEarthquakes() {
+        AlertDialog.Builder(this).setTitle("Recent earthquakes • USGS")
+            .setMessage("Fetches significant earthquake reports from the US Geological Survey public GeoJSON feed. No API key, account, or subscription required. Data is informational and may be revised.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Fetch latest") { _, _ -> loadRecentEarthquakes() }
+            .show()
+    }
+
+    private fun loadRecentEarthquakes() {
+        showAnswer("Fetching recent earthquake reports…")
+        thread {
+            val result = try {
+                val feed = apiGet("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson")
+                val features = feed.optJSONArray("features") ?: JSONArray()
+                if (features.length() == 0) {
+                    "USGS reports no significant earthquakes in this feed's current monthly window."
+                } else {
+                    buildString {
+                        append("Recent significant earthquakes (USGS)\n\n")
+                        for (index in 0 until minOf(features.length(), 10)) {
+                            val item = features.optJSONObject(index) ?: continue
+                            val properties = item.optJSONObject("properties") ?: continue
+                            val magnitude = properties.optDouble("mag", Double.NaN)
+                            val place = properties.optString("place", "Location unavailable")
+                            val timestamp = properties.optLong("time", 0L)
+                            append(if (magnitude.isNaN()) "Magnitude unavailable" else "Magnitude " + String.format(Locale.US, "%.1f", magnitude))
+                            append(" • ").append(place)
+                            if (timestamp > 0L) {
+                                val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.US)
+                                formatter.timeZone = TimeZone.getTimeZone("UTC")
+                                append("\n").append(formatter.format(Date(timestamp)))
+                            }
+                            val url = properties.optString("url")
+                            if (url.startsWith("https://")) append("\n").append(url)
+                            append("\n\n")
+                        }
+                        append("Source: USGS Earthquake Hazards Program • significant_month GeoJSON feed")
+                        append("\nReports may be revised; this is not an emergency alert service.")
+                    }
+                }
+            } catch (e: Exception) {
+                "USGS earthquake feed unavailable: " + (e.message ?: "network error")
+            }
+            runOnUiThread { showAnswer(result) }
+        }
     }
 
     private fun promptFreeTranslation() {
