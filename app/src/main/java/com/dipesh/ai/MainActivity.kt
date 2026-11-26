@@ -624,6 +624,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "Currency rates • Frankfurter • No key",
             "Country information • REST Countries • No key",
             "Public holidays • Nager.Date • No key",
+            "Wikipedia search • Wikimedia • No key",
+            "Book search • Open Library • No key",
             "API directory and terms",
             "Gemini AI • User's own free-tier key"
         )
@@ -634,8 +636,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     1 -> promptCurrencyConversion()
                     2 -> promptCountryInfo()
                     3 -> promptPublicHolidays()
-                    4 -> showApiDirectoryInfo()
-                    5 -> showSettings()
+                    4 -> promptWikipediaSearch()
+                    5 -> promptBookSearch()
+                    6 -> showApiDirectoryInfo()
+                    7 -> showSettings()
                 }
             }
             .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
@@ -872,12 +876,86 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         } finally { connection.disconnect() }
     }
 
+    private fun promptWikipediaSearch() {
+        val query = EditText(this).apply { hint = "Search Wikipedia"; setSingleLine(true) }
+        AlertDialog.Builder(this).setTitle("Wikipedia • Free search")
+            .setMessage("Search public encyclopedia articles. No API key required.")
+            .setView(query).setNegativeButton("Cancel", null)
+            .setPositiveButton("Search") { _, _ ->
+                val term = query.text.toString().trim()
+                if (term.isBlank()) toast("Enter a search term.") else loadWikipedia(term)
+            }.show()
+    }
+
+    private fun loadWikipedia(term: String) {
+        showAnswer("Searching Wikipedia for $term…")
+        thread {
+            val result = try {
+                val data = apiGet("https://en.wikipedia.org/w/rest.php/v1/search/page?q=" + Uri.encode(term) + "&limit=8")
+                val pages = data.optJSONArray("pages") ?: JSONArray()
+                if (pages.length() == 0) throw Exception("No matching articles.")
+                buildString {
+                    append("Wikipedia results for ").append(term)
+                    for (i in 0 until minOf(pages.length(), 8)) {
+                        val item = pages.optJSONObject(i) ?: continue
+                        val title = item.optString("title")
+                        append("\\n\\n").append(i + 1).append(". ").append(title)
+                        val description = item.optString("description")
+                        if (description.isNotBlank()) append("\\n").append(description)
+                        append("\\nhttps://en.wikipedia.org/wiki/").append(Uri.encode(title).replace("%20", "_"))
+                    }
+                    append("\\n\\nSource: Wikimedia / Wikipedia. Verify important facts against cited sources.")
+                }
+            } catch (e: Exception) { "Wikipedia search failed: " + (e.message ?: "network error") }
+            runOnUiThread { showAnswer(result) }
+        }
+    }
+
+    private fun promptBookSearch() {
+        val query = EditText(this).apply { hint = "Book title or author"; setSingleLine(true) }
+        AlertDialog.Builder(this).setTitle("Book search • Open Library")
+            .setMessage("Search public library catalogue metadata. No API key required; reasonable-use limits apply.")
+            .setView(query).setNegativeButton("Cancel", null)
+            .setPositiveButton("Search") { _, _ ->
+                val term = query.text.toString().trim()
+                if (term.isBlank()) toast("Enter a book title or author.") else loadBookSearch(term)
+            }.show()
+    }
+
+    private fun loadBookSearch(term: String) {
+        showAnswer("Searching books for $term…")
+        thread {
+            val result = try {
+                val data = apiGet("https://openlibrary.org/search.json?q=" + Uri.encode(term) + "&limit=8")
+                val docs = data.optJSONArray("docs") ?: JSONArray()
+                if (docs.length() == 0) throw Exception("No matching books.")
+                buildString {
+                    append("Open Library results for ").append(term)
+                    for (i in 0 until minOf(docs.length(), 8)) {
+                        val item = docs.optJSONObject(i) ?: continue
+                        append("\\n\\n").append(i + 1).append(". ").append(item.optString("title", "Untitled"))
+                        val authors = item.optJSONArray("author_name")
+                        if (authors != null && authors.length() > 0) append("\\nAuthor: ").append(authors.join(", "))
+                        val year = item.optInt("first_publish_year", 0)
+                        if (year > 0) append("\\nFirst published: ").append(year)
+                        val key = item.optString("key")
+                        if (key.startsWith("/works/")) append("\\nhttps://openlibrary.org").append(key)
+                    }
+                    append("\\n\\nSource: Open Library. Search results are bibliographic metadata, not a guarantee that a book is freely downloadable.")
+                }
+            } catch (e: Exception) { "Book search failed: " + (e.message ?: "network error") }
+            runOnUiThread { showAnswer(result) }
+        }
+    }
+
     private fun showApiDirectoryInfo() {
         AlertDialog.Builder(this).setTitle("Free API directory")
             .setMessage(
                 "ACTIVE NO-KEY CONNECTORS\n" +
                 "• Open-Meteo: geocoding and weather forecast; free service is for non-commercial use and has daily limits. Attribution required (CC BY 4.0).\n" +
                 "• Frankfurter: reference exchange rates; no API key; rates are published by central banks and are not live trading quotes.\n\n" +
+                "• Wikipedia/Wikimedia REST: article search; no key; respect Wikimedia access policies.\\n" +
+                "• Open Library: book metadata search; no key; 1 request/second default limit; identify app and cache results.\\n\\n" +
                 "OTHER BUILT-IN / DEVICE SERVICES\n" +
                 "• Gemini Developer API: limited free tier, requires your own key.\n" +
                 "• Android speech recognition and Text-to-Speech: depends on installed Android speech services.\n\n" +
