@@ -81,6 +81,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ReminderReceiver.restorePendingReminders(this)
         tts = TextToSpeech(this, this)
         val legacyKey = prefs.getString("key", "").orEmpty()
         if (legacyKey.isNotBlank()) {
@@ -669,8 +670,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == reminderPermissionRequest) {
-            toast(if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                "Notifications allowed. Add the reminder again." else "Notifications are disabled; enable them in Android Settings.")
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (granted) ReminderReceiver.restorePendingReminders(this)
+            toast(if (granted) "Notifications allowed. Existing reminders restored." else "Notifications are disabled; enable them in Android Settings.")
         }
     }
 
