@@ -100,6 +100,12 @@ These are observations from source code, not a claim that every feature has pass
 - **Scheduled:** hand a labelled, user-selected alarm time to Android Clock; the user reviews/confirms it there.
 - **Plugins:** list existing built-in integrations and route each item to its corresponding feature; no arbitrary third-party plugin code is executed.
 
+
+### 11. Portrait Command Center UI
+- Add a phone-first futuristic dashboard inspired by the supplied visual: dark navy surface, cyan neon borders, central AI core, system status, voice log, analytics status, and assistant option tiles.
+- Lock the main activity to portrait orientation for a 9:16-style mobile experience. The interface adapts to the device's actual available height; it is not a fixed-resolution 9:16 canvas.
+- Show only real app state. Predictive analytics is labelled as not connected until a real data source is implemented.
+
 ## Build
 The repository includes a GitHub Actions workflow at .github/workflows/android.yml. Open the Actions tab, select **Build Dipesh AI APK**, and run it manually, or push a commit to main. Download the Dipesh-AI-debug-apk artifact only after the workflow succeeds.
 
