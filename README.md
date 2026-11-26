@@ -13,7 +13,7 @@ DIPESH AI is being developed as a polished Android assistant for Hindi and mixed
 - Hindi speech-recognition input and Text-to-Speech output
 - Camera and gallery image selection
 - Permission-based one-time screen capture for AI understanding
-- Local conversation history and basic offline replies
+- Offline-first mode toggle with local arithmetic (including parentheses), built-in app guidance, greetings, and explicit disclosure that this is not a downloaded local LLM
 - Android Settings and Dialer shortcuts
 - Searchable installed-app picker with package-name hints; the user explicitly selects which app to open
 - User-triggered Accessibility shortcuts (Back, Home, Notifications, Quick Settings)
