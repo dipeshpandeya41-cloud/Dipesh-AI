@@ -768,32 +768,53 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         catch (_: Exception) { toast("Could not open the file picker.") }
     }
 
-    private fun parseTaskCsvRow(line: String): List<String> {
-        val fields = mutableListOf<String>()
+    private fun parseTaskCsvRecords(contents: String): List<List<String>> {
+        val records = mutableListOf<List<String>>()
+        var fields = mutableListOf<String>()
         val cell = StringBuilder()
         var quoted = false
         var index = 0
-        while (index < line.length) {
-            val ch = line[index]
-            if (ch == '"') {
-                if (quoted && index + 1 < line.length && line[index + 1] == '"') {
-                    cell.append('"')
-                    index++
-                } else quoted = !quoted
-            } else if (ch == ',' && !quoted) {
-                fields.add(cell.toString())
-                cell.setLength(0)
-            } else cell.append(ch)
+        while (index < contents.length) {
+            val ch = contents[index]
+            when {
+                ch == '"' -> {
+                    if (quoted && index + 1 < contents.length && contents[index + 1] == '"') {
+                        cell.append('"')
+                        index++
+                    } else {
+                        quoted = !quoted
+                    }
+                }
+                ch == ',' && !quoted -> {
+                    fields.add(cell.toString())
+                    cell.setLength(0)
+                }
+                (ch == '\n' || ch == '\r') && !quoted -> {
+                    fields.add(cell.toString())
+                    cell.setLength(0)
+                    if (fields.any { it.isNotBlank() }) records.add(fields)
+                    fields = mutableListOf()
+                    if (ch == '\r' && index + 1 < contents.length && contents[index + 1] == '\n') index++
+                }
+                else -> cell.append(ch)
+            }
             index++
         }
+        if (quoted) throw IllegalArgumentException("Unclosed quoted CSV field")
         fields.add(cell.toString())
-        return fields
+        if (fields.any { it.isNotBlank() }) records.add(fields)
+        return records
     }
 
     private fun importTaskCsv(contents: String) {
-        val lines = contents.removePrefix("\uFEFF").lineSequence().filter { it.isNotBlank() }.toList()
-        val expectedHeader = "title,done,priority,due_at,reminder_id,repeat_daily,created_at"
-        if (lines.size < 2 || !lines.first().trim().equals(expectedHeader, ignoreCase = true)) {
+        val records = try {
+            parseTaskCsvRecords(contents.removePrefix("\uFEFF"))
+        } catch (_: IllegalArgumentException) {
+            toast("The CSV contains an unfinished quoted field.")
+            return
+        }
+        val expectedHeader = listOf("title", "done", "priority", "due_at", "reminder_id", "repeat_daily", "created_at")
+        if (records.size < 2 || records.first().map { it.trim().lowercase(Locale.ROOT) } != expectedHeader) {
             toast("This is not a supported DIPESH AI task backup CSV.")
             return
         }
@@ -808,9 +829,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         var added = 0
         var skipped = 0
-        for (line in lines.drop(1)) {
+        for (fields in records.drop(1)) {
             if (tasks.length() >= 100) { skipped++; continue }
-            val fields = parseTaskCsvRow(line)
             if (fields.size < 7 || fields[0].isBlank()) { skipped++; continue }
             val title = fields[0].take(180)
             val createdAt = fields[6].toLongOrNull()?.takeIf { it > 0L } ?: System.currentTimeMillis()
