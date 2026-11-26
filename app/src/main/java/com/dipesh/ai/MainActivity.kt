@@ -626,6 +626,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "Public holidays • Nager.Date • No key",
             "Wikipedia search • Wikimedia • No key",
             "Book search • Open Library • No key",
+            "English dictionary • Dictionary API • No key",
             "API directory and terms",
             "Gemini AI • User's own free-tier key"
         )
@@ -638,8 +639,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     3 -> promptPublicHolidays()
                     4 -> promptWikipediaSearch()
                     5 -> promptBookSearch()
-                    6 -> showApiDirectoryInfo()
-                    7 -> showSettings()
+                    6 -> promptDictionaryLookup()
+                    7 -> showApiDirectoryInfo()
+                    8 -> showSettings()
                 }
             }
             .setMessage("These integrations use public free endpoints where available. No paid plan is configured and no API call can guarantee unlimited or permanent free access.")
@@ -948,6 +950,75 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
+    private fun promptDictionaryLookup() {
+        val word = EditText(this).apply {
+            hint = "Enter an English word"
+            setSingleLine(true)
+        }
+        AlertDialog.Builder(this).setTitle("English dictionary • Free API")
+            .setMessage("Look up definitions, phonetics, and examples. Public endpoint; no API key required.")
+            .setView(word).setNegativeButton("Cancel", null)
+            .setPositiveButton("Look up") { _, _ ->
+                val term = word.text.toString().trim()
+                if (term.isBlank()) toast("Enter a word first.") else loadDictionaryEntry(term)
+            }.show()
+    }
+
+    private fun loadDictionaryEntry(word: String) {
+        showAnswer("Looking up “$word”…")
+        thread {
+            val result = try {
+                val entries = apiGetArray("https://api.dictionaryapi.dev/api/v2/entries/en/" + Uri.encode(word))
+                if (entries.length() == 0) throw Exception("No dictionary entry found.")
+                buildString {
+                    append("English dictionary: ").append(word)
+                    for (i in 0 until minOf(entries.length(), 3)) {
+                        val entry = entries.optJSONObject(i) ?: continue
+                        val phonetic = entry.optString("phonetic")
+                        if (phonetic.isNotBlank()) append("\\nPhonetic: ").append(phonetic)
+                        val meanings = entry.optJSONArray("meanings") ?: JSONArray()
+                        for (j in 0 until minOf(meanings.length(), 4)) {
+                            val meaning = meanings.optJSONObject(j) ?: continue
+                            append("\\n\\n").append(meaning.optString("partOfSpeech", "Meaning"))
+                            val definitions = meaning.optJSONArray("definitions") ?: JSONArray()
+                            for (k in 0 until minOf(definitions.length(), 2)) {
+                                val definition = definitions.optJSONObject(k) ?: continue
+                                append("\\n• ").append(definition.optString("definition"))
+                                val example = definition.optString("example")
+                                if (example.isNotBlank()) append("\\n  Example: ").append(example)
+                            }
+                        }
+                    }
+                    append("\\n\\nSource: Free Dictionary API. English definitions only.")
+                }
+            } catch (e: Exception) {
+                "Dictionary lookup failed: " + (e.message ?: "network error")
+            }
+            runOnUiThread { showAnswer(result) }
+        }
+    }
+
+    private fun apiGetArray(address: String): JSONArray {
+        val url = URL(address)
+        require(url.protocol == "https") { "Only HTTPS APIs are allowed." }
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 10000
+            readTimeout = 12000
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("User-Agent", "DIPESH-AI-Android/1.0")
+        }
+        try {
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) throw Exception("HTTP $code: " + body.take(180))
+            return JSONArray(body)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     private fun showApiDirectoryInfo() {
         AlertDialog.Builder(this).setTitle("Free API directory")
             .setMessage(
@@ -955,7 +1026,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 "• Open-Meteo: geocoding and weather forecast; free service is for non-commercial use and has daily limits. Attribution required (CC BY 4.0).\n" +
                 "• Frankfurter: reference exchange rates; no API key; rates are published by central banks and are not live trading quotes.\n\n" +
                 "• Wikipedia/Wikimedia REST: article search; no key; respect Wikimedia access policies.\\n" +
-                "• Open Library: book metadata search; no key; 1 request/second default limit; identify app and cache results.\\n\\n" +
+                "• Open Library: book metadata search; no key; 1 request/second default limit; identify app and cache results.\\n" +
+                "• Free Dictionary API: English definitions, phonetics and examples; no key; public endpoint and provider usage policy apply.\\n\\n" +
                 "OTHER BUILT-IN / DEVICE SERVICES\n" +
                 "• Gemini Developer API: limited free tier, requires your own key.\n" +
                 "• Android speech recognition and Text-to-Speech: depends on installed Android speech services.\n\n" +
