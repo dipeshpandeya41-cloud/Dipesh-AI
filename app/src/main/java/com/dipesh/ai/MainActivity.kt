@@ -643,9 +643,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 val titleInput = EditText(this).apply { hint = "Reminder title"; setSingleLine(true) }
                 AlertDialog.Builder(this).setTitle("Reminder details").setView(titleInput)
                     .setNegativeButton("Cancel", null)
-                    .setPositiveButton("Schedule") { _, _ ->
+                    .setPositiveButton("Next") { _, _ ->
                         val title = titleInput.text.toString().trim().ifBlank { "DIPESH AI reminder" }.take(180)
-                        scheduleLocalReminder(title, date.timeInMillis)
+                        AlertDialog.Builder(this).setTitle("Repeat reminder")
+                            .setSingleChoiceItems(arrayOf("One time", "Every day"), 0, null)
+                            .setNegativeButton("Cancel", null)
+                            .setPositiveButton("Schedule") { repeatDialog, _ ->
+                                val daily = (repeatDialog as AlertDialog).listView.checkedItemPosition == 1
+                                scheduleLocalReminder(title, date.timeInMillis, daily)
+                            }.show()
                     }.show()
             }, now.get(Calendar.HOUR_OF_DAY), now.get(Calendar.MINUTE), false).show()
         }, now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DAY_OF_MONTH)).apply {
@@ -653,7 +659,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }.show()
     }
 
-    private fun scheduleLocalReminder(title: String, triggerAt: Long) {
+    private fun scheduleLocalReminder(title: String, triggerAt: Long, repeatDaily: Boolean = false) {
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             toast("Allow notifications, then add the reminder again.")
@@ -676,7 +682,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             return
         }
         tasks.put(JSONObject().put("title", title).put("done", false)
-            .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId))
+            .put("created_at", System.currentTimeMillis()).put("due_at", triggerAt).put("reminder_id", reminderId).put("repeat_daily", repeatDaily))
         prefs.edit().putString("local_tasks", tasks.toString()).apply()
         toast("Reminder scheduled on this device.")
         showTasksHub()
