@@ -1139,7 +1139,7 @@ Website category:
             "\nPreferred technology: " + technology.ifBlank { "Vanilla HTML, CSS, and JavaScript" } +
             "\nRequirements: " + requirements.ifBlank { "Responsive navigation, hero, content sections, and footer" } + """
             
-Return a single complete, self-contained index.html in ONE html code fence, with embedded CSS and JavaScript. Include responsive mobile-first layout, accessible semantic HTML, keyboard-friendly controls, sensible contrast, and polished design. Avoid paid services, build steps, external libraries, and external assets unless explicitly requested. Use placeholders for secrets and backend credentials; never put secrets in browser code. Add brief instructions after the code explaining how to preview it on Android and what must be configured before production. Do not claim that hosting or deployment has happened.
+Return a multi-file website project. For EACH file, write a heading exactly like FILE: index.html, FILE: styles.css, FILE: script.js, then one correctly labelled fenced code block containing that file's complete contents. Start with index.html and use relative links to styles.css and script.js. Include responsive mobile-first layout, semantic accessible HTML, keyboard-friendly controls, sensible contrast, and polished design. Add additional files only when useful (for example assets/README.txt). Avoid paid services, build steps, external libraries, and external assets unless explicitly requested. Use placeholders for secrets and backend credentials; never put secrets in browser code. Finish with brief Android preview and production setup instructions outside the file blocks. Do not claim that hosting or deployment has happened.
             """.trimIndent()
         }
         updateConnectionStatus(if (isAgent) "Building AI agent starter…" else "Building website starter…", 0xFF8BC5FF.toInt())
@@ -1156,6 +1156,28 @@ Return a single complete, self-contained index.html in ONE html code fence, with
                 showDevelopmentOutput(if (isAgent) "AI Agent: $projectName" else "Website: $projectName", result, if (isAgent) "agent-starter.md" else "index.html")
             }
         }
+    }
+
+    private fun parseWebsiteProjectFiles(content: String): List<Pair<String, String>> {
+        val pattern = Regex("(?is)(?:^|\\n)\\s*(?:#{1,6}\\s*)?FILE\\s*:\\s*([^\\n]+)\\n\\s*```[a-zA-Z0-9_-]*\\s*\\n(.*?)\\n\\s*```")
+        val files = mutableListOf<Pair<String, String>>()
+        for (match in pattern.findAll(content)) {
+            val path = match.groupValues[1].trim().replace('\\\\', '/')
+            val parts = path.split('/')
+            if (path.isBlank() || path.startsWith("/") || parts.any { it == ".." || it.isBlank() }) continue
+            if (!path.matches(Regex("[A-Za-z0-9_./-]+"))) continue
+            if (files.none { it.first == path }) files.add(path to match.groupValues[2].trim() + "\\n")
+        }
+        if (files.isEmpty()) {
+            val html = Regex("(?is)```(?:html)?\\s*(.*?)```").find(content)?.groupValues?.get(1)?.trim()
+                ?: content.substringBefore("Android preview").trim()
+            files.add("index.html" to html)
+        }
+        if (files.none { it.first == "index.html" }) {
+            val html = files.firstOrNull { it.first.endsWith(".html") }?.second
+            if (html != null) files.add(0, "index.html" to html)
+        }
+        return files
     }
 
     private fun showDevelopmentOutput(title: String, content: String, fileName: String) {
@@ -1194,7 +1216,7 @@ Return a single complete, self-contained index.html in ONE html code fence, with
                                 type = if (zip) "application/zip" else "text/html"
                                 putExtra(Intent.EXTRA_TITLE, if (zip) "dipesh-ai-website.zip" else "index.html")
                             }
-                            try { startActivityForResult(intent, if (zip) 50 else 49) }
+                            try { startActivityForResult(intent, if (zip) 51 else 49) }
                             catch (_: Exception) { toast("File picker is unavailable.") }
                         }.setNegativeButton("Cancel", null).show()
                 } else {
@@ -1467,7 +1489,7 @@ Return a single complete, self-contained index.html in ONE html code fence, with
                     }
                 }
             }
-            50 -> {
+            51 -> {
                 val uri = data.data
                 if (uri != null) {
                     try {
@@ -1478,9 +1500,12 @@ Return a single complete, self-contained index.html in ONE html code fence, with
                                     zip.write(content.toByteArray(Charsets.UTF_8))
                                     zip.closeEntry()
                                 }
-                                addFile("index.html", pendingDevelopmentExport)
-                                addFile("README.md", "# DIPESH AI Website\\n\\nOpen index.html in a modern browser. Edit the HTML to customize your site.\\n")
-                                addFile("assets/README.txt", "Place images, fonts, and other static assets in this folder, then reference them from index.html.\\n")
+                                val files = parseWebsiteProjectFiles(pendingDevelopmentExport)
+                                files.forEach { (filePath, fileContent) -> addFile(filePath, fileContent) }
+                                addFile("README.md", "# DIPESH AI Website\\n\\nOpen index.html in a modern browser. The project includes separate source files; keep their relative paths unchanged.\\n")
+                                if (files.none { it.first.startsWith("assets/") }) {
+                                    addFile("assets/README.txt", "Place images, fonts, and other static assets in this folder, then reference them from index.html.\\n")
+                                }
                             }
                         } ?: throw IllegalStateException("Could not open destination")
                         toast("Website ZIP package exported successfully.")
