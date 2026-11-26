@@ -52,6 +52,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .setAutoCancel(true)
             .build()
         manager.notify(id, notification)
+        scheduleNextDailyOccurrence(context, id)
     }
 
 
@@ -88,6 +89,33 @@ class ReminderReceiver : BroadcastReceiver() {
             alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, newDue, pending)
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.cancel(reminderId)
+        }
+
+        private fun scheduleNextDailyOccurrence(context: Context, reminderId: Int) {
+            val preferences = context.getSharedPreferences("dipesh_ai", Context.MODE_PRIVATE)
+            val tasks = try { JSONArray(preferences.getString("local_tasks", "[]")) } catch (_: Exception) { JSONArray() }
+            val nextDue = System.currentTimeMillis() + 24L * 60L * 60L * 1000L
+            var title = "DIPESH AI reminder"
+            var found = false
+            for (index in 0 until tasks.length()) {
+                val task = tasks.optJSONObject(index) ?: continue
+                if (task.optInt("reminder_id", 0) == reminderId && task.optBoolean("repeat_daily") && !task.optBoolean("done")) {
+                    task.put("due_at", nextDue)
+                    title = task.optString("title", title)
+                    found = true
+                    break
+                }
+            }
+            if (!found) return
+            preferences.edit().putString("local_tasks", tasks.toString()).apply()
+            val nextIntent = Intent(context, ReminderReceiver::class.java).apply {
+                putExtra(EXTRA_TITLE, title)
+                putExtra(EXTRA_ID, reminderId)
+            }
+            val pending = PendingIntent.getBroadcast(context, reminderId, nextIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextDue, pending)
         }
 
         fun restorePendingReminders(context: Context) {
