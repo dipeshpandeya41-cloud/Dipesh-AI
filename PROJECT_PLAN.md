@@ -9,6 +9,8 @@ The app should be usable from an Android phone without a PC. Cloud AI features r
 The current source tree contains:
 - Native Android application written in Kotlin using Android Views.
 - Gemini generateContent request code with a configurable model (default: gemini-2.5-flash).
+- Android Keystore-backed AES-GCM storage for the Gemini API key; requests use the `x-goog-api-key` header.
+- Configurable speech-recognition locale, installed TTS voice cycling, a user-selected text/CSV file picker, and a Termux launcher shortcut.
 - Hindi speech recognition intent and Android Text-to-Speech output.
 - Camera capture and gallery image selection followed by Gemini image analysis.
 - One-time screen capture using Android MediaProjection consent before analysis.
@@ -83,3 +85,8 @@ The repository includes a GitHub Actions workflow at .github/workflows/android.y
 
 ## Important status note
 The roadmap describes intended work. A feature should be called complete only after its implementation and build/device testing have been verified.
+
+
+## Advanced assistant feature targets
+
+The broader feature request is tracked in [docs/ADVANCED_ASSISTANT_ARCHITECTURE.md](docs/ADVANCED_ASSISTANT_ARCHITECTURE.md). It covers provider switching, user-controlled memory, multilingual installed voices, selected-file access, CSV/XLSX workflows, Termux, GitHub coding workflows, safe skill loading, Android automation, and paired computer/TV/smart-device integrations. These are not all implemented yet. Each item must pass build and real-device verification before being marked complete.
