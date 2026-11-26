@@ -240,6 +240,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             text = "🌐 Website Builder"
             setOnClickListener { showDevelopmentWorkspace(false) }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        developmentTools.addView(Button(this).apply {
+            text = "🎬 Video Studio"
+            setOnClickListener { showVideoEditingWorkspace() }
+        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(developmentTools, matchWidth())
 
         chatScroll = ScrollView(this).apply {
@@ -1865,6 +1869,111 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     )
                 }
             }.show()
+    }
+
+    private fun showVideoEditingWorkspace() {
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(18, 8, 18, 4)
+        }
+        val projectName = EditText(this).apply {
+            hint = "Video project name"
+            setSingleLine(true)
+            setPadding(10, 10, 10, 10)
+        }
+        val brief = EditText(this).apply {
+            hint = "Describe the video you want to create or edit"
+            minLines = 3
+            maxLines = 5
+            gravity = Gravity.TOP
+            setPadding(10, 10, 10, 10)
+        }
+        val skillNames = VideoEditingSkills.all.map { it.name }.toTypedArray()
+        var selectedSkill = 0
+        val skillPicker = TextView(this).apply {
+            text = "🎬 Skill: ${skillNames[selectedSkill]}  •  Tap to change"
+            textSize = 14f
+            setTextColor(0xFF8BC5FF.toInt())
+            setPadding(10, 14, 10, 14)
+        }
+        skillPicker.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Choose one of 3 free video editing skills")
+                .setItems(skillNames) { _, which ->
+                    selectedSkill = which
+                    skillPicker.text = "🎬 Skill: ${skillNames[selectedSkill]}  •  Tap to change"
+                }.show()
+        }
+        panel.addView(TextView(this).apply {
+            text = "Create a reviewable video-editing project using one of exactly three open-source tool skills. Generated code is saved for export; DIPESH AI does not render or execute it inside the app."
+            textSize = 13f
+            setTextColor(0xFFD6E2F0.toInt())
+        })
+        panel.addView(projectName)
+        panel.addView(brief)
+        panel.addView(skillPicker)
+        panel.addView(TextView(this).apply {
+            text = VideoEditingSkills.all.joinToString("\n\n") { "${it.name}: ${it.description}" }
+            textSize = 12f
+            setTextColor(0xFFB8C7D9.toInt())
+            setPadding(10, 4, 10, 8)
+        })
+        AlertDialog.Builder(this)
+            .setTitle("Free Video Editing Studio")
+            .setView(ScrollView(this).apply { addView(panel) })
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Generate project") { _, _ ->
+                val title = projectName.text.toString().trim().ifBlank { "My Video Project" }
+                val description = brief.text.toString().trim()
+                if (description.isBlank()) toast("Describe the video project first.")
+                else generateVideoEditingArtifact(title, description, VideoEditingSkills.all[selectedSkill])
+            }.show()
+    }
+
+    private fun generateVideoEditingArtifact(
+        projectName: String,
+        brief: String,
+        skill: VideoEditingSkills.Skill
+    ) {
+        val key = secureKeys.read().orEmpty()
+        if (key.isBlank()) {
+            toast("Add your Gemini API key in AI/API Settings first.")
+            showSettings()
+            return
+        }
+        val instruction = """
+You are a senior video editor and software engineer. Generate a practical, reviewable starter project using ONLY this selected skill.
+Selected skill: ${skill.name}
+Tool details: ${skill.description}
+Project: $projectName
+Video brief: $brief
+
+Return a multi-file project. For EVERY file, use exactly this format:
+FILE: relative/path.ext
+```language
+complete file contents
+```
+Include a useful README.md, exact installation and run commands, editable project source, example input/output folder guidance, and a small validation checklist. Prefer local processing and free/open-source dependencies. Do not require paid APIs, subscriptions, cloud rendering, or API keys. Never include secrets.
+Tool-specific requirements:
+- Remotion: create a React + TypeScript composition project with package.json, src/Root.tsx, src/Composition.tsx, and README.md; include composition dimensions, fps, duration, text/image/audio layers where relevant, and render command. Note that Remotion's license terms can vary by usage; do not claim every commercial use is free.
+- FFmpeg: create a portable command-based editing starter with README.md and clearly commented scripts or command examples for trimming, concatenation, scaling, subtitles, audio mix, and MP4 export. Quote paths safely, explain codec availability, and do not execute commands.
+- MoviePy: create a Python starter with requirements.txt, main.py, README.md, and a small test or validation script; use MoviePy's current stable public API style and explain FFmpeg dependency.
+Only create files relevant to the selected skill. Do not invent that a render has occurred. Never auto-run generated scripts or download user media. Use placeholders for media paths. Include copyright-safe guidance: use media the user owns or has permission to edit. Keep all generated paths relative and safe.
+        """.trimIndent()
+        updateConnectionStatus("Building ${skill.name} video project…", 0xFF8BC5FF.toInt())
+        toast("Generating ${skill.name} starter project…")
+        thread {
+            val result = try {
+                requestGemini(instruction, key, null)
+            } catch (e: Exception) {
+                "Project generation failed: " + (e.message ?: "network error")
+            }
+            runOnUiThread {
+                val failed = result.startsWith("Project generation failed:")
+                updateConnectionStatus(if (failed) "Generation failed • Check AI settings" else "Video project generated", if (failed) 0xFFFF8A80.toInt() else 0xFF83D6A5.toInt())
+                showDevelopmentOutput("Video Studio: $projectName", result, "video-project.md")
+            }
+        }
     }
 
     private fun generateDevelopmentArtifact(
