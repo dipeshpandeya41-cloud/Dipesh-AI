@@ -59,3 +59,6 @@ Gemini online features require your own API key. Keep it private: do not paste i
 - Language: Kotlin
 - Current UI toolkit: Android Views
 - Default Gemini model in the current source: gemini-2.5-flash
+
+- Futuristic portrait Command Center inspired by the supplied reference: neon cyan panels, central AI core, system status, voice log, analytics status, and quick assistant actions.
+- Main activity is locked to portrait orientation for a phone-first 9:16-style experience.
