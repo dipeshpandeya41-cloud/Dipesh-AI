@@ -21,9 +21,11 @@ import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ListView
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -348,8 +350,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun openInstalledAppChooser() {
-        // Only query launcher activities; Android package visibility is declared
-        // narrowly in the manifest. The user explicitly chooses the app to launch.
+        // Query launcher activities only; Android package visibility stays narrowly scoped.
         val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         val apps = packageManager.queryIntentActivities(query, 0)
             .distinctBy { it.activityInfo.packageName }
@@ -360,17 +361,52 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             return
         }
 
-        val labels = apps.map { it.loadLabel(packageManager).toString() }.toTypedArray()
-        AlertDialog.Builder(this)
+        // Include a package suffix so apps with identical display names remain distinguishable.
+        val rows = apps.map { info ->
+            val label = info.loadLabel(packageManager).toString()
+            val packageName = info.activityInfo.packageName
+            "$label  ·  ${packageName.substringAfterLast('.')}"
+        }
+        val search = EditText(this).apply {
+            hint = "Search installed apps"
+            setSingleLine(true)
+            setPadding(28, 20, 28, 16)
+        }
+        val list = ListView(this)
+        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, rows.toMutableList())
+        list.adapter = adapter
+
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Choose an installed app")
-            .setItems(labels) { _, index ->
-                val selected = apps[index].activityInfo
-                val launch = packageManager.getLaunchIntentForPackage(selected.packageName)
+            .setView(LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(search, matchWidth())
+                addView(list, LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+                ).apply { height = 420 })
+            })
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        search.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                adapter.filter.filter(s)
+            }
+            override fun afterTextChanged(s: android.text.Editable?) = Unit
+        })
+        list.setOnItemClickListener { _, _, position, _ ->
+            val selectedRow = adapter.getItem(position)
+            val selectedIndex = rows.indexOf(selectedRow)
+            if (selectedIndex >= 0) {
+                val packageName = apps[selectedIndex].activityInfo.packageName
+                val launch = packageManager.getLaunchIntentForPackage(packageName)
                 if (launch != null) launchSafely(launch)
                 else toast("This app does not provide a launch screen.")
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun openTermux() {
