@@ -452,6 +452,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         panel.addView(model)
         panel.addView(key)
         panel.addView(speechLanguage)
+        panel.addView(Button(this).apply {
+            text = "Choose an installed speech language"
+            setOnClickListener { showInstalledSpeechLanguages(speechLanguage) }
+        })
         panel.addView(TextView(this).apply {
             text = "Optional memory is stored locally. If saved, its contents are sent to Gemini with your AI requests. Do not save passwords, API keys, or highly sensitive information."
             textSize = 12f
@@ -1503,6 +1507,40 @@ Return a multi-file website project. For EACH file, write a heading exactly like
         }
         try { startActivityForResult(intent, 46) }
         catch (_: Exception) { toast("File picker उपलब्ध नहीं है।") }
+    }
+
+    private fun showInstalledSpeechLanguages(target: EditText) {
+        val engine = tts
+        if (engine == null || !ttsReady) {
+            toast("Text-to-speech is still starting. Try again shortly.")
+            return
+        }
+        val languages = engine.availableLanguages.orEmpty()
+            .filter { engine.isLanguageAvailable(it) >= TextToSpeech.LANG_AVAILABLE }
+            .distinctBy { it.toLanguageTag() }
+            .sortedBy { it.displayName }
+        if (languages.isEmpty()) {
+            toast("No installed TTS languages found. Install voice data in Android Text-to-speech settings.")
+            return
+        }
+        val labels = languages.map { locale ->
+            "${locale.displayName} (${locale.toLanguageTag()})"
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Installed speech languages")
+            .setItems(labels) { _, which ->
+                val locale = languages[which]
+                val result = engine.setLanguage(locale)
+                if (result >= TextToSpeech.LANG_AVAILABLE) {
+                    target.setText(locale.toLanguageTag())
+                    prefs.edit().putString("speech_language", locale.toLanguageTag()).apply()
+                    toast("Speech language: ${locale.displayName}")
+                } else {
+                    toast("This voice needs additional data or is not supported.")
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun cycleVoice() {
