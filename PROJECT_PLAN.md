@@ -17,7 +17,7 @@ The current source tree contains:
 - Local conversation-history persistence using app preferences.
 - Basic offline replies when no API key is configured.
 - Phone Settings and Dialer shortcuts.
-- Installed-app picker lists launchable apps; the user explicitly selects which app to open.
+- Searchable installed-app picker lists launchable apps with package-name hints; the user explicitly selects which app to open.
 - Accessibility Service with user-invoked Back, Home, Notifications, and Quick Settings actions.
 - GitHub Actions workflow that builds a debug APK and uploads it as an artifact.
 
