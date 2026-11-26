@@ -1908,7 +1908,7 @@ Return a multi-file website project. For EACH file, write a heading exactly like
                 amount * (toBase[from] ?: return null) / (toBase[to] ?: return null)
             }
         }
-        return "$amount $from = \${formatOfflineNumber(result)} $to (offline conversion)"
+        return "$amount $from = ${formatOfflineNumber(result)} $to (offline conversion)"
     }
 
     private fun formatOfflineNumber(value: Double): String =
