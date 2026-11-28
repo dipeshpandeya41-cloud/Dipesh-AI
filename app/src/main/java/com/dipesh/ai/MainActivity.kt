@@ -109,186 +109,163 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun buildScreen() {
+        val light = prefs.getBoolean("light_theme", false)
+        val bg = if (light) 0xFFF2F6FC.toInt() else 0xFF070D18.toInt()
+        val surface = if (light) 0xFFFFFFFF.toInt() else 0xFF101C2D.toInt()
+        val fg = if (light) 0xFF10243A.toInt() else 0xFFEAF7FF.toInt()
+        val muted = if (light) 0xFF52677D.toInt() else 0xFF8FA8BE.toInt()
+        window.statusBarColor = bg
+        window.navigationBarColor = bg
+        window.decorView.systemUiVisibility = if (light) View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(16, 20, 16, 12)
-            setBackgroundColor(if (prefs.getBoolean("light_theme", false)) 0xFFF2F4F8.toInt() else 0xFF101827.toInt())
+            setPadding(14.dp(), 10.dp(), 14.dp(), 8.dp())
+            setBackgroundColor(bg)
         }
-        root.addView(TextView(this).apply {
-            text = "DIPESH AI"
-            textSize = 27f
-            gravity = Gravity.CENTER
-            setTextColor(0xFF8BC5FF.toInt())
-        }, matchWidth())
-        root.addView(TextView(this).apply {
-            text = "हिंदी AI • Voice • Camera • Phone Tools"
-            textSize = 14f
-            gravity = Gravity.CENTER
-            setTextColor(0xFFD6E2F0.toInt())
-            setPadding(0, 5, 0, 4)
-        }, matchWidth())
-        connectionStatus = TextView(this).apply {
-            text = "Checking AI connection…"
-            textSize = 12f
-            gravity = Gravity.CENTER
-            setPadding(8, 4, 8, 10)
-        }
-        root.addView(connectionStatus, matchWidth())
-        root.addView(createCommandCenter(), matchWidth())
-
-        val settingsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        settingsRow.addView(Button(this).apply {
-            text = "⚙ AI/API सेटिंग"
+        val header = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val brand = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        brand.addView(TextView(this).apply {
+            text = "DIPESH AI"; textSize = 24f; letterSpacing = 0.12f
+            typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+            setTextColor(if (light) 0xFF087FA8.toInt() else 0xFF78E7FF.toInt())
+        })
+        brand.addView(TextView(this).apply {
+            text = "PERSONAL INTELLIGENCE  •  HINDI + MULTILINGUAL"
+            textSize = 9f; letterSpacing = 0.07f; setTextColor(muted)
+        })
+        header.addView(brand, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        header.addView(TextView(this).apply {
+            text = "⚙"; textSize = 22f; gravity = Gravity.CENTER; setTextColor(fg)
+            background = GradientDrawable().apply { setColor(surface); cornerRadius = 15.dp().toFloat(); setStroke(1.dp(), if (light) 0xFFD7E4F0.toInt() else 0xFF28435D.toInt()) }
+            setPadding(14.dp(), 8.dp(), 14.dp(), 8.dp())
+            contentDescription = "AI and API settings"
             setOnClickListener { showSettings() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        settingsRow.addView(Button(this).apply {
-            text = "🔊 जवाब सुनें"
-            setOnClickListener {
-                val latest = transcript.substringAfterLast("Dipesh AI: ", "")
-                if (latest.isNotBlank()) speak(latest)
+        })
+        root.addView(header, matchWidth())
+
+        connectionStatus = TextView(this).apply {
+            text = "Checking secure AI connection…"; textSize = 11f
+            setTextColor(if (light) 0xFF795A20.toInt() else 0xFFFFD18A.toInt())
+            setPadding(12.dp(), 8.dp(), 12.dp(), 8.dp())
+            background = GradientDrawable().apply {
+                setColor(if (light) 0xFFFFF5DF.toInt() else 0xFF282316.toInt())
+                cornerRadius = 12.dp().toFloat()
+                setStroke(1.dp(), if (light) 0xFFEED9A8.toInt() else 0xFF67502A.toInt())
             }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        root.addView(settingsRow, matchWidth())
+        }
+        root.addView(connectionStatus, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 7.dp() })
 
-        val tools = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        tools.addView(Button(this).apply {
-            text = "📷 कैमरा"
-            setOnClickListener { openCamera() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        tools.addView(Button(this).apply {
-            text = "🖼 फोटो चुनें"
-            setOnClickListener { choosePhoto() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        tools.addView(Button(this).apply {
-            text = "📁 फ़ाइल"
-            setOnClickListener { openTextFile() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        root.addView(tools, matchWidth())
+        val dashboardScroll = ScrollView(this).apply { isFillViewport = false; setPadding(0, 8.dp(), 0, 6.dp()) }
+        val dashboard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        dashboard.addView(createCommandCenter(), matchWidth())
 
-        val phoneTools = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        phoneTools.addView(Button(this).apply {
-            text = "⚙ फोन सेटिंग"
-            setOnClickListener { launchSafely(Intent(android.provider.Settings.ACTION_SETTINGS)) }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        phoneTools.addView(Button(this).apply {
-            text = "📞 डायलर"
-            setOnClickListener { launchSafely(Intent(Intent.ACTION_DIAL)) }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        phoneTools.addView(Button(this).apply {
-            text = "🖥 स्क्रीन समझें"
-            setOnClickListener { requestScreenCapture() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        phoneTools.addView(Button(this).apply {
-            text = "🧹 चैट साफ़"
-            setOnClickListener {
-                transcript = "Dipesh AI: नमस्ते! मैं Dipesh AI हूँ।"
-                renderHistory()
-                prefs.edit().remove("conversation_history").apply()
-                saveHistory()
+        fun addSection(title: String, subtitle: String, items: List<Pair<String, () -> Unit>>) {
+            val heading = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(3.dp(), 12.dp(), 3.dp(), 5.dp()) }
+            heading.addView(TextView(this).apply {
+                text = title; textSize = 12f; letterSpacing = 0.1f; typeface = Typeface.DEFAULT_BOLD
+                setTextColor(if (light) 0xFF087FA8.toInt() else 0xFF78E7FF.toInt())
+            })
+            heading.addView(TextView(this).apply { text = subtitle; textSize = 10f; setTextColor(muted) })
+            dashboard.addView(heading, matchWidth())
+            items.chunked(2).forEach { group ->
+                val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                group.forEach { item ->
+                    val tile = Button(this).apply {
+                        text = item.first; textSize = 11f; isAllCaps = false
+                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+                        setTextColor(fg); minHeight = 47.dp(); setPadding(5.dp(), 4.dp(), 5.dp(), 4.dp())
+                        background = GradientDrawable().apply {
+                            setColor(surface); cornerRadius = 13.dp().toFloat()
+                            setStroke(1.dp(), if (light) 0xFFD8E5F0.toInt() else 0xFF29435D.toInt())
+                        }
+                        stateListAnimator = null
+                        setOnClickListener { item.second() }
+                    }
+                    row.addView(tile, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(3.dp(), 3.dp(), 3.dp(), 3.dp()) })
+                }
+                if (group.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+                dashboard.addView(row, matchWidth())
             }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        phoneTools.addView(Button(this).apply {
-            text = "🤖 Automation"
-            setOnClickListener { showAutomationControls() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        phoneTools.addView(Button(this).apply {
-            text = "⌨ Termux"
-            setOnClickListener { openTermux() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        root.addView(phoneTools, matchWidth())
+        }
 
-        root.addView(Button(this).apply {
-            text = "📱 Open Installed App"
-            setOnClickListener { openInstalledAppChooser() }
-        }, matchWidth())
-
-        root.addView(Button(this).apply {
-            text = "📲 Phone Access Hub"
-            setOnClickListener { showPhoneAccessHub() }
-        }, matchWidth())
-
-        val navigation = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val navActions = listOf(
-            "🖼 Images" to { showImagesHub() },
-            "📚 Library" to { showLibraryHub() },
-            "✅ Tasks" to { showTasksHub() },
-            "🎨 Customize" to { showCustomizeHub() },
+        addSection("QUICK ACCESS", "Voice, vision and creative tools", listOf(
+            "🎙 Voice input" to { startVoiceInput() },
+            "🔊 Speak latest" to { val latest = transcript.substringAfterLast("Dipesh AI: ", ""); if (latest.isNotBlank()) speak(latest) },
+            "📷 Camera" to { openCamera() },
+            "🖼 Choose photo" to { choosePhoto() },
+            "📁 Import file" to { openTextFile() },
+            "🧠 AI Agent Builder" to { showDevelopmentWorkspace(true) },
+            "🌐 Website Builder" to { showDevelopmentWorkspace(false) },
+            "🎬 Video Studio" to { showVideoEditingWorkspace() }
+        ))
+        addSection("WORKSPACE", "Your projects, knowledge and productivity", listOf(
             "📂 Projects" to { showProjectsHub() },
-            "🖥 Remote" to { showRemoteHub() },
+            "📚 Library" to { showLibraryHub() },
+            "✅ Tasks & reminders" to { showTasksHub() },
+            "🖼 Images hub" to { showImagesHub() },
+            "🎨 Customize" to { showCustomizeHub() },
             "🕒 Scheduled" to { showScheduledHub() },
-            "🔌 Plugins" to { showPluginsHub() }
-        )
-        navActions.chunked(2).forEach { group ->
-            val navRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            group.forEach { action ->
-                navRow.addView(Button(this).apply {
-                    text = action.first
-                    setOnClickListener { action.second() }
-                }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            }
-            if (group.size == 1) navRow.addView(TextView(this), LinearLayout.LayoutParams(0, 1, 1f))
-            navigation.addView(navRow, matchWidth())
+            "🔌 Plugins" to { showPluginsHub() },
+            "🛡 Privacy center" to { showPrivacyInfo() }
+        ))
+        addSection("PHONE & SYSTEM", "Permission-based actions stay under your control", listOf(
+            "📱 Installed apps" to { openInstalledAppChooser() },
+            "🖥 Screen understanding" to { requestScreenCapture() },
+            "📲 Phone Access Hub" to { showPhoneAccessHub() },
+            "🤖 Automation" to { showAutomationControls() },
+            "⚙ Android settings" to { launchSafely(Intent(android.provider.Settings.ACTION_SETTINGS)) },
+            "📞 Dialer" to { launchSafely(Intent(Intent.ACTION_DIAL)) },
+            "⌨ Termux" to { openTermux() },
+            "🌙 Remote access info" to { showRemoteHub() }
+        ))
+        dashboardScroll.addView(dashboard)
+        root.addView(dashboardScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.43f))
+
+        val chatHeader = TextView(this).apply {
+            text = "✦  CONVERSATION"; textSize = 11f; letterSpacing = 0.1f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(if (light) 0xFF087FA8.toInt() else 0xFF78E7FF.toInt())
+            setPadding(3.dp(), 4.dp(), 3.dp(), 5.dp())
         }
-        root.addView(navigation, matchWidth())
-
-        val developmentTools = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        developmentTools.addView(Button(this).apply {
-            text = "🤖 AI Agent Builder"
-            setOnClickListener { showDevelopmentWorkspace(true) }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        developmentTools.addView(Button(this).apply {
-            text = "🌐 Website Builder"
-            setOnClickListener { showDevelopmentWorkspace(false) }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        developmentTools.addView(Button(this).apply {
-            text = "🎬 Video Studio"
-            setOnClickListener { showVideoEditingWorkspace() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        root.addView(developmentTools, matchWidth())
-
+        root.addView(chatHeader, matchWidth())
         chatScroll = ScrollView(this).apply {
-            isFillViewport = true
-            setPadding(4, 8, 4, 8)
+            isFillViewport = true; setPadding(3.dp(), 5.dp(), 3.dp(), 5.dp())
+            background = GradientDrawable().apply {
+                setColor(surface); cornerRadius = 16.dp().toFloat()
+                setStroke(1.dp(), if (light) 0xFFD8E5F0.toInt() else 0xFF20364D.toInt())
+            }
         }
-        chat = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(6, 4, 6, 12)
-        }
+        chat = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(8.dp(), 7.dp(), 8.dp(), 10.dp()) }
         chatScroll.addView(chat)
-        root.addView(chatScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        root.addView(chatScroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 0.57f))
 
         input = EditText(this).apply {
-            hint = "अपना संदेश लिखें..."
-            setHintTextColor(0xFF9AA9BC.toInt())
-            setTextColor(0xFFFFFFFF.toInt())
-            setPadding(12, 8, 12, 8)
+            hint = "Message Dipesh AI…"; textSize = 14f; maxLines = 3
+            setHintTextColor(muted); setTextColor(fg); setPadding(13.dp(), 9.dp(), 13.dp(), 9.dp())
+            background = GradientDrawable().apply { setColor(surface); cornerRadius = 14.dp().toFloat(); setStroke(1.dp(), if (light) 0xFFD8E5F0.toInt() else 0xFF29435D.toInt()) }
         }
-        root.addView(input, matchWidth())
-        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        actions.addView(Button(this).apply {
-            text = "📊 Excel में कॉपी"
-            setOnClickListener { copyForSpreadsheet() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        actions.addView(Button(this).apply {
-            text = "⬇ CSV Export"
-            setOnClickListener { exportSpreadsheetFile() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        actions.addView(Button(this).apply {
-            text = "⌨ Save .sh"
-            setOnClickListener { exportTermuxScript() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        actions.addView(Button(this).apply {
-            text = "🎙 बोलें"
-            setOnClickListener { startVoiceInput() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        actions.addView(Button(this).apply {
-            text = "भेजें"
-            setOnClickListener { sendMessage() }
-        }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        root.addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = 6.dp() })
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        fun action(label: String, weight: Float = 1f, primary: Boolean = false, run: () -> Unit) {
+            val button = Button(this).apply {
+                text = label; textSize = 10f; isAllCaps = false; minHeight = 42.dp()
+                setTextColor(if (primary) 0xFF04131F.toInt() else fg)
+                background = GradientDrawable().apply {
+                    setColor(if (primary) 0xFF71E3F5.toInt() else surface)
+                    cornerRadius = 11.dp().toFloat()
+                    if (!primary) setStroke(1.dp(), if (light) 0xFFD8E5F0.toInt() else 0xFF29435D.toInt())
+                }
+                stateListAnimator = null; setOnClickListener { run() }
+            }
+            actions.addView(button, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, weight).apply { setMargins(2.dp(), 4.dp(), 2.dp(), 0) })
+        }
+        action("＋ File") { openTextFile() }
+        action("🎙 Voice") { startVoiceInput() }
+        action("Send", 1.2f, true) { sendMessage() }
         root.addView(actions, matchWidth())
         setContentView(root)
     }
-
 
     private fun createCommandCenter(): LinearLayout {
         val panel = LinearLayout(this).apply {
